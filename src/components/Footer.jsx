@@ -39,23 +39,23 @@ export const Footer = () => {
             </div>
 
             <p className="text-xs text-slate-400 max-w-sm leading-relaxed">
-              Pioneering 4K multimodal neural video synthesis. Turn text prompts into photorealistic video scenes with zero flicker, causal flow-matching, and camera path directing.
+              Create prompt-themed animated scenes in your browser, export real video files, and keep your local renders in your personal gallery.
             </p>
 
             {/* Live Operational Status */}
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-dark-900 border border-emerald-500/30 text-emerald-300 text-xs font-mono">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>GPU Cluster 99.98% Operational (H100 Active)</span>
+              <span>Browser Video Renderer Ready</span>
             </div>
           </div>
 
           {/* Col 2: AI Models */}
           <div className="space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-white font-mono">AI Models</h4>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-white font-mono">Render Profiles</h4>
             <ul className="space-y-2 text-xs text-slate-400">
               <li>
                 <button onClick={() => setCurrentView('models')} className="hover:text-brand-300 transition-colors">
-                  Bhideo Cinema v3 (4K)
+                  Bhideo Cinema v3
                 </button>
               </li>
               <li>

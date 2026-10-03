@@ -29,24 +29,23 @@ export const HeroSection = ({ onOpenStudio }) => {
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-dark-900/90 border border-brand-500/30 shadow-lg shadow-brand-500/10 mb-8 backdrop-blur-md animate-float">
           <span className="flex h-2 w-2 rounded-full bg-brand-cyan animate-ping" />
           <span className="text-xs font-semibold text-slate-200">
-            Announcing <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-brand-cyan font-bold">AI-Bhideo Cinema v3</span> with 4K Anamorphic DiT
+            Browser-based prompt video previews with downloadable clips
           </span>
           <ArrowRight className="w-3.5 h-3.5 text-brand-400" />
         </div>
 
         {/* Main Headline */}
         <h1 className="text-4xl sm:text-6xl lg:text-7xl font-display font-extrabold tracking-tight text-white max-w-5xl mx-auto leading-[1.12]">
-          Turn Simple Words into{' '}
+          Turn a Prompt into{' '}
           <span className="gradient-text-neon">
-            Cinematic 4K Videos
+            an Animated Video
           </span>{' '}
-          in Seconds
+          You Can Download
         </h1>
 
         {/* Subtitle */}
         <p className="mt-6 text-base sm:text-xl text-slate-300 max-w-3xl mx-auto leading-relaxed font-normal">
-          AI-Bhideo is a next-generation neural text-to-video diffusion transformer. 
-          Generate photorealistic scenes, directed camera motions, and zero-flicker physics with zero VFX overhead.
+          Describe a scene and AI-Bhideo renders a prompt-themed animation in your browser, then exports a playable WebM or MP4 clip. This demo does not connect to a hosted AI inference model.
         </p>
 
         {/* Action CTAs */}
@@ -114,20 +113,20 @@ export const HeroSection = ({ onOpenStudio }) => {
         {/* Performance & Feature Stats Ticker */}
         <div className="mt-14 pt-10 border-t border-white/10 grid grid-cols-2 sm:grid-cols-4 gap-6 max-w-4xl mx-auto">
           <div className="text-center p-3">
-            <p className="font-display font-extrabold text-2xl sm:text-3xl text-white">12.8M+</p>
-            <p className="text-xs text-slate-400 mt-1 uppercase tracking-wider font-medium">Videos Synthesized</p>
+            <p className="font-display font-extrabold text-xl sm:text-2xl text-white">Prompt-themed</p>
+            <p className="text-xs text-slate-400 mt-1 uppercase tracking-wider font-medium">Local canvas scenes</p>
           </div>
           <div className="text-center p-3">
-            <p className="font-display font-extrabold text-2xl sm:text-3xl text-transparent bg-clip-text bg-gradient-to-r from-brand-neon to-brand-400">99.8%</p>
-            <p className="text-xs text-slate-400 mt-1 uppercase tracking-wider font-medium">Temporal Consistency</p>
+            <p className="font-display font-extrabold text-2xl sm:text-3xl text-transparent bg-clip-text bg-gradient-to-r from-brand-neon to-brand-400">16s</p>
+            <p className="text-xs text-slate-400 mt-1 uppercase tracking-wider font-medium">Maximum clip length</p>
           </div>
           <div className="text-center p-3">
-            <p className="font-display font-extrabold text-2xl sm:text-3xl text-white">4K 60FPS</p>
-            <p className="text-xs text-slate-400 mt-1 uppercase tracking-wider font-medium">Native Super Resolution</p>
+            <p className="font-display font-extrabold text-xl sm:text-2xl text-white">WebM / MP4</p>
+            <p className="text-xs text-slate-400 mt-1 uppercase tracking-wider font-medium">Playable video exports</p>
           </div>
           <div className="text-center p-3">
-            <p className="font-display font-extrabold text-2xl sm:text-3xl text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-rose-400">&lt; 0.8s</p>
-            <p className="text-xs text-slate-400 mt-1 uppercase tracking-wider font-medium">Turbo Frame Speed</p>
+            <p className="font-display font-extrabold text-2xl sm:text-3xl text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-rose-400">Local</p>
+            <p className="text-xs text-slate-400 mt-1 uppercase tracking-wider font-medium">No model API configured</p>
           </div>
         </div>
 

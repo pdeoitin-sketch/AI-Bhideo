@@ -16,20 +16,23 @@ import {
 import { ProceduralVideoEngine } from '../utils/proceduralVideoGenerator';
 
 export const VideoCard = ({ video }) => {
-  const { toggleLikeVideo, remixPrompt, copyPrompt, copyToClipboard, setActiveLightboxVideo, showToast } = useApp();
+  const { toggleLikeVideo, remixPrompt, copyPrompt, copyToClipboard, setActiveLightboxVideo, showToast, videoAssets } = useApp();
   const [isHovered, setIsHovered] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const canvasRef = useRef(null);
+  const videoRef = useRef(null);
   const engineRef = useRef(null);
+  const videoAsset = videoAssets?.[video.id];
 
   useEffect(() => {
-    if (canvasRef.current) {
+    if (canvasRef.current && !videoAsset?.url) {
       const canvas = canvasRef.current;
       canvas.width = 640;
       canvas.height = 360;
 
       const engine = new ProceduralVideoEngine(canvas, video.theme || 'cyberpunk', {
+        prompt: video.prompt,
         fps: video.fps || 60,
         duration: parseInt(video.duration) || 8,
         motionStrength: video.motionScore || 7.5,
@@ -46,10 +49,15 @@ export const VideoCard = ({ video }) => {
       if (engineRef.current) engineRef.current.destroy();
       engineRef.current = null;
     };
-  }, [video]);
+  }, [video, videoAsset?.url]);
 
   const handleMouseEnter = () => {
     setIsHovered(true);
+    if (videoAsset?.url) {
+      videoRef.current?.play().catch(() => {});
+      setIsPlaying(true);
+      return;
+    }
     if (engineRef.current && !engineRef.current.destroyed) {
       engineRef.current.play();
       setIsPlaying(true);
@@ -58,6 +66,12 @@ export const VideoCard = ({ video }) => {
 
   const handleMouseLeave = () => {
     setIsHovered(false);
+    if (videoAsset?.url) {
+      videoRef.current?.pause();
+      if (videoRef.current) videoRef.current.currentTime = 0;
+      setIsPlaying(false);
+      return;
+    }
     if (engineRef.current && !engineRef.current.destroyed) {
       engineRef.current.pause();
       setIsPlaying(false);
@@ -97,10 +111,22 @@ export const VideoCard = ({ video }) => {
       {/* Video Canvas Container */}
       <div className="relative aspect-video w-full bg-dark-900 overflow-hidden">
         
-        <canvas 
-          ref={canvasRef} 
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-        />
+        {videoAsset?.url ? (
+          <video
+            ref={videoRef}
+            src={videoAsset.url}
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            className="w-full h-full object-contain group-hover:scale-[1.02] transition-transform duration-700"
+          />
+        ) : (
+          <canvas
+            ref={canvasRef}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+          />
+        )}
 
         {/* Top Badges */}
         <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between z-10 pointer-events-none">

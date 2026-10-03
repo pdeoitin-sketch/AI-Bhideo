@@ -1,11 +1,19 @@
-// Procedural Dynamic Neural Video Generator on HTML5 Canvas
-// Creates realistic, cinematic, high-aesthetic animated visual sequences based on prompt semantics and themes.
+// Prompt-themed procedural video renderer on HTML5 Canvas. This is a local
+// visual renderer, not a remote neural inference service.
+
+function addRoundedRect(ctx, x, y, width, height, radius) {
+  if (typeof ctx.roundRect === 'function') ctx.roundRect(x, y, width, height, radius);
+  else ctx.rect(x, y, width, height);
+}
 
 export class ProceduralVideoEngine {
   constructor(canvas, theme = 'cyberpunk', options = {}) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
     this.theme = theme;
+    this.prompt = String(options.prompt || '').replace(/\s+/g, ' ').trim();
+    this.subject = this.detectPromptSubject(this.prompt);
+    this.captionLines = this.wrapPromptCaption(this.prompt, canvas.width);
     this.options = {
       fps: options.fps || 60,
       duration: options.duration || 8,
@@ -51,6 +59,49 @@ export class ProceduralVideoEngine {
         phase: Math.random() * Math.PI * 2
       });
     }
+  }
+
+  detectPromptSubject(prompt) {
+    const text = String(prompt || '').toLowerCase();
+    if (/jellyfish|medusa/.test(text)) return 'jellyfish';
+    if (/train|locomotive|railway/.test(text)) return 'train';
+    if (/perfume|bottle|vial/.test(text)) return 'bottle';
+    if (/drone|quad(copter)?|fpv/.test(text)) return 'drone';
+    if (/spaceship|starship|rocket|ufo|spacecraft/.test(text)) return 'spacecraft';
+    if (/astronaut/.test(text)) return 'astronaut';
+    if (/hypercar|car|vehicle|motorcycle|motorbike|truck/.test(text)) return 'vehicle';
+    return null;
+  }
+
+  wrapPromptCaption(prompt, width) {
+    if (!prompt) return [];
+    const maxCharacters = Math.max(24, Math.floor(width / 16));
+    const words = prompt.split(/\s+/);
+    const lines = [''];
+    let wordIndex = 0;
+
+    for (; wordIndex < words.length; wordIndex++) {
+      const word = words[wordIndex];
+      const lastLine = lines[lines.length - 1];
+      const candidate = lastLine ? `${lastLine} ${word}` : word;
+      if (candidate.length > maxCharacters && lastLine) {
+        if (lines.length === 2) break;
+        lines.push(word);
+      } else {
+        lines[lines.length - 1] = candidate;
+      }
+      if (lines.length === 2 && lines[1].length >= maxCharacters) {
+        wordIndex++;
+        break;
+      }
+    }
+
+    if (wordIndex < words.length) {
+      const lastLineIndex = lines.length - 1;
+      const line = lines[lastLineIndex].replace(/[.,;:!?…]+$/, '');
+      lines[lastLineIndex] = `${line.slice(0, Math.max(1, maxCharacters - 1)).trimEnd()}…`;
+    }
+    return lines.filter(Boolean);
   }
 
   getThemeParticleColor() {
@@ -109,11 +160,15 @@ export class ProceduralVideoEngine {
         break;
     }
 
+    // Draw a simple animated subject when the prompt names a supported object.
+    this.renderPromptSubject(ctx, w, h, t);
+
     // Camera preset overlay effect
     this.renderCameraMotion(ctx, w, h, t);
 
     // Cinematic Film Grain & Anamorphic Letterbox if applicable
     this.renderCinematicOverlay(ctx, w, h, t);
+    this.renderPromptCaption(ctx, w, h);
 
     ctx.restore();
 
@@ -477,6 +532,281 @@ export class ProceduralVideoEngine {
     ctx.fill();
   }
 
+  renderPromptSubject(ctx, w, h, t) {
+    if (!this.subject) return;
+    const sceneScale = Math.min(w / 1280, h / 720, 1);
+
+    ctx.save();
+    if (this.subject === 'vehicle') {
+      const x = w * 0.5 + Math.sin(t * 0.8) * w * 0.09;
+      const y = h * 0.75 + Math.sin(t * 1.6) * h * 0.008;
+      ctx.translate(x, y);
+      ctx.scale(sceneScale, sceneScale);
+
+      const underglow = ctx.createRadialGradient(0, 22, 10, 0, 22, 270);
+      underglow.addColorStop(0, 'rgba(0, 245, 255, 0.48)');
+      underglow.addColorStop(1, 'rgba(0, 245, 255, 0)');
+      ctx.fillStyle = underglow;
+      ctx.beginPath();
+      ctx.ellipse(0, 26, 270, 52, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      const body = ctx.createLinearGradient(0, -130, 0, 22);
+      body.addColorStop(0, '#dbeafe');
+      body.addColorStop(0.16, '#64748b');
+      body.addColorStop(0.55, '#1e293b');
+      body.addColorStop(1, '#070b16');
+      ctx.shadowColor = '#00f5ff';
+      ctx.shadowBlur = 30;
+      ctx.fillStyle = body;
+      ctx.strokeStyle = 'rgba(0, 245, 255, 0.9)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(-286, 7);
+      ctx.lineTo(-258, -28);
+      ctx.quadraticCurveTo(-246, -52, -205, -57);
+      ctx.lineTo(-142, -111);
+      ctx.quadraticCurveTo(-122, -130, -84, -132);
+      ctx.lineTo(73, -132);
+      ctx.quadraticCurveTo(113, -130, 145, -84);
+      ctx.lineTo(217, -63);
+      ctx.quadraticCurveTo(257, -56, 275, -20);
+      ctx.lineTo(286, 8);
+      ctx.quadraticCurveTo(255, 25, 219, 25);
+      ctx.lineTo(-226, 25);
+      ctx.quadraticCurveTo(-266, 24, -286, 7);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Panoramic windshield and cabin highlights.
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = 'rgba(3, 15, 35, 0.92)';
+      ctx.strokeStyle = 'rgba(125, 211, 252, 0.8)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-128, -112);
+      ctx.lineTo(-78, -122);
+      ctx.lineTo(65, -122);
+      ctx.quadraticCurveTo(92, -119, 118, -84);
+      ctx.lineTo(-155, -84);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Wheels, hub lights, and headlamps.
+      [-174, 178].forEach((wheelX) => {
+        ctx.fillStyle = '#05070d';
+        ctx.strokeStyle = '#a5f3fc';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(wheelX, 14, 34, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#38bdf8';
+        ctx.beginPath();
+        ctx.arc(wheelX, 14, 12 + Math.sin(t * 4) * 1.5, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.shadowColor = '#f472b6';
+      ctx.shadowBlur = 20;
+      ctx.fillStyle = '#fb7185';
+      ctx.fillRect(-272, -6, 26, 7);
+      ctx.shadowColor = '#67e8f9';
+      ctx.fillStyle = '#cffafe';
+      ctx.fillRect(249, -8, 29, 8);
+    } else if (this.subject === 'spacecraft') {
+      const scale = Math.min(w / 900, h / 620, 1.15);
+      const x = w * 0.5 + Math.sin(t * 0.7) * w * 0.12;
+      const y = h * 0.46 + Math.cos(t * 0.9) * h * 0.05;
+      ctx.translate(x, y);
+      ctx.scale(scale, scale);
+      ctx.shadowColor = '#67e8f9';
+      ctx.shadowBlur = 28;
+      ctx.fillStyle = '#cbd5e1';
+      ctx.strokeStyle = '#a5f3fc';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(178, 0);
+      ctx.lineTo(12, -34);
+      ctx.lineTo(-96, -28);
+      ctx.lineTo(-168, -62);
+      ctx.lineTo(-138, -8);
+      ctx.lineTo(-186, 19);
+      ctx.lineTo(-72, 14);
+      ctx.lineTo(25, 33);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#7c3aed';
+      ctx.beginPath();
+      ctx.ellipse(-22, -1, 38, 16, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = `rgba(251, 146, 60, ${0.65 + Math.sin(t * 12) * 0.2})`;
+      ctx.beginPath();
+      ctx.moveTo(-164, -17);
+      ctx.lineTo(-257 - Math.sin(t * 15) * 14, -5);
+      ctx.lineTo(-164, 9);
+      ctx.closePath();
+      ctx.fill();
+    } else if (this.subject === 'jellyfish') {
+      const scale = Math.min(w / 850, h / 680, 1.1);
+      const x = w * 0.5 + Math.sin(t * 0.6) * w * 0.12;
+      const y = h * 0.43 + Math.sin(t * 1.1) * h * 0.04;
+      ctx.translate(x, y);
+      ctx.scale(scale, scale);
+      const bell = ctx.createRadialGradient(-28, -25, 8, 0, 0, 135);
+      bell.addColorStop(0, 'rgba(240, 249, 255, 0.98)');
+      bell.addColorStop(0.35, 'rgba(167, 139, 250, 0.92)');
+      bell.addColorStop(1, 'rgba(34, 211, 238, 0.16)');
+      ctx.shadowColor = '#a78bfa';
+      ctx.shadowBlur = 34;
+      ctx.fillStyle = bell;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 118, 78 + Math.sin(t * 2) * 8, 0, Math.PI, Math.PI * 2);
+      ctx.lineTo(118, 8);
+      ctx.quadraticCurveTo(0, 72, -118, 8);
+      ctx.closePath();
+      ctx.fill();
+      ctx.shadowBlur = 12;
+      ctx.strokeStyle = 'rgba(165, 243, 252, 0.85)';
+      ctx.lineWidth = 5;
+      for (let tentacle = -3; tentacle <= 3; tentacle++) {
+        const startX = tentacle * 27;
+        ctx.beginPath();
+        ctx.moveTo(startX, 35);
+        ctx.bezierCurveTo(
+          startX + Math.sin(t * 1.7 + tentacle) * 22, 88,
+          startX - Math.cos(t * 1.3 + tentacle) * 25, 135,
+          startX + Math.sin(t * 1.5 + tentacle) * 35, 190
+        );
+        ctx.stroke();
+      }
+    } else if (this.subject === 'train') {
+      const scale = Math.min(w / 1280, h / 760, 1);
+      const x = w * 0.5 + Math.sin(t * 0.35) * w * 0.05;
+      const y = h * 0.67;
+      ctx.translate(x, y);
+      ctx.scale(scale, scale);
+      ctx.shadowColor = '#fb7185';
+      ctx.shadowBlur = 24;
+      ctx.fillStyle = '#312e81';
+      ctx.strokeStyle = '#fbcfe8';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(-330, 45);
+      ctx.lineTo(-304, -92);
+      ctx.quadraticCurveTo(-290, -126, -236, -126);
+      ctx.lineTo(274, -126);
+      ctx.quadraticCurveTo(321, -120, 330, -72);
+      ctx.lineTo(330, 45);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#fef3c7';
+      for (let windowX = -250; windowX <= 220; windowX += 95) {
+        ctx.fillRect(windowX, -98, 62, 52);
+      }
+      ctx.fillStyle = '#09090b';
+      [-225, -75, 75, 225].forEach((wheelX) => {
+        ctx.beginPath();
+        ctx.arc(wheelX, 54, 23, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.fillStyle = '#f472b6';
+      ctx.fillRect(274, -22, 35, 11);
+    } else if (this.subject === 'bottle') {
+      const scale = Math.min(w / 760, h / 640, 1.1);
+      const x = w * 0.5 + Math.sin(t * 0.5) * w * 0.04;
+      const y = h * 0.52;
+      ctx.translate(x, y);
+      ctx.scale(scale, scale);
+      ctx.shadowColor = '#f9a8d4';
+      ctx.shadowBlur = 40;
+      const glass = ctx.createLinearGradient(-105, 0, 105, 0);
+      glass.addColorStop(0, 'rgba(244, 114, 182, 0.2)');
+      glass.addColorStop(0.48, 'rgba(255, 255, 255, 0.92)');
+      glass.addColorStop(1, 'rgba(192, 132, 252, 0.28)');
+      ctx.fillStyle = glass;
+      ctx.strokeStyle = '#fbcfe8';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      addRoundedRect(ctx, -104, -166, 208, 330, 38);
+      ctx.fill();
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#fce7f3';
+      ctx.fillRect(-45, -220, 90, 60);
+      ctx.fillStyle = '#f472b6';
+      ctx.fillRect(-55, -238, 110, 24);
+      ctx.fillStyle = 'rgba(190, 24, 93, 0.7)';
+      ctx.fillRect(-70, 6, 140, 54);
+    } else if (this.subject === 'drone') {
+      const scale = Math.min(w / 900, h / 650, 1.1);
+      ctx.translate(w * 0.5 + Math.sin(t) * w * 0.07, h * 0.4 + Math.cos(t * 1.4) * h * 0.04);
+      ctx.scale(scale, scale);
+      ctx.shadowColor = '#67e8f9';
+      ctx.shadowBlur = 25;
+      ctx.strokeStyle = '#dbeafe';
+      ctx.fillStyle = '#1e293b';
+      ctx.lineWidth = 8;
+      ctx.beginPath();
+      ctx.moveTo(-48, -5);
+      ctx.lineTo(-240, -74);
+      ctx.moveTo(48, -5);
+      ctx.lineTo(240, -74);
+      ctx.moveTo(-48, 8);
+      ctx.lineTo(-200, 90);
+      ctx.moveTo(48, 8);
+      ctx.lineTo(200, 90);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 74, 42, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = '#67e8f9';
+      [[-240, -74], [240, -74], [-200, 90], [200, 90]].forEach(([propX, propY]) => {
+        ctx.beginPath();
+        ctx.ellipse(propX, propY, 72, 12 + Math.sin(t * 18) * 2, t * 1.5, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.fillStyle = '#fb7185';
+      ctx.beginPath();
+      ctx.arc(0, 6, 13, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (this.subject === 'astronaut') {
+      const scale = Math.min(w / 800, h / 700, 1.1);
+      ctx.translate(w * 0.5 + Math.sin(t * 0.55) * w * 0.07, h * 0.48 + Math.cos(t * 0.9) * h * 0.04);
+      ctx.scale(scale, scale);
+      ctx.shadowColor = '#c4b5fd';
+      ctx.shadowBlur = 30;
+      ctx.fillStyle = '#e2e8f0';
+      ctx.beginPath();
+      addRoundedRect(ctx, -94, -6, 188, 230, 52);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(0, -94, 105, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#172554';
+      ctx.strokeStyle = '#67e8f9';
+      ctx.lineWidth = 9;
+      ctx.beginPath();
+      ctx.ellipse(0, -94, 75, 60, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#a78bfa';
+      ctx.fillRect(-62, 78, 124, 42);
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath();
+      ctx.arc(-40, -94, 8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
   renderCameraMotion(ctx, w, h, t) {
     const preset = this.options.cameraPreset;
     if (preset === 'pan-left') {
@@ -501,6 +831,41 @@ export class ProceduralVideoEngine {
     for (let y = 0; y < h; y += 4) {
       ctx.fillRect(0, y, w, 1);
     }
+  }
+
+  renderPromptCaption(ctx, w, h) {
+    if (!this.captionLines.length) return;
+
+    const fontSize = Math.max(12, Math.min(25, w * 0.024));
+    const labelSize = Math.max(9, Math.min(13, w * 0.011));
+    const lineHeight = fontSize * 1.28;
+    const padding = Math.max(16, w * 0.035);
+    const labelHeight = labelSize * 1.7;
+    const contentHeight = this.captionLines.length * lineHeight;
+    const top = h - padding - contentHeight - labelHeight;
+
+    ctx.save();
+    const gradient = ctx.createLinearGradient(0, top - 26, 0, h);
+    gradient.addColorStop(0, 'rgba(2, 6, 23, 0)');
+    gradient.addColorStop(0.28, 'rgba(2, 6, 23, 0.6)');
+    gradient.addColorStop(1, 'rgba(2, 6, 23, 0.96)');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, top - 26, w, h - top + 26);
+
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    ctx.font = `700 ${labelSize}px system-ui, sans-serif`;
+    ctx.fillStyle = '#67e8f9';
+    ctx.fillText('PROMPT-BASED VIDEO PREVIEW', padding, top + labelSize, w - padding * 2);
+
+    ctx.font = `600 ${fontSize}px system-ui, sans-serif`;
+    ctx.fillStyle = '#f8fafc';
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+    ctx.shadowBlur = 5;
+    this.captionLines.forEach((line, index) => {
+      ctx.fillText(line, padding, top + labelHeight + fontSize + index * lineHeight, w - padding * 2);
+    });
+    ctx.restore();
   }
 
   play() {

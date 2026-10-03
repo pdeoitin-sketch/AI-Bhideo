@@ -24,9 +24,9 @@ export const UpgradeModal = () => {
   if (!isUpgradeModalOpen) return null;
 
   const creditPacks = [
-    { id: 'pack-500', amount: 500, price: 9, label: '+500 Credits', note: '≈ 100 Turbo renders' },
-    { id: 'pack-2000', amount: 2000, price: 29, label: '+2,000 Credits', note: '≈ 400 Cinema renders', popular: true },
-    { id: 'pack-6000', amount: 6000, price: 79, label: '+6,000 Credits', note: 'Best value per credit' },
+    { id: 'pack-500', amount: 500, price: 5, label: '+500 Credits', note: '≈ 500 Turbo renders' },
+    { id: 'pack-2000', amount: 2000, price: 15, label: '+2,000 Credits', note: '≈ 500 Cinema renders', popular: true },
+    { id: 'pack-6000', amount: 6000, price: 39, label: '+6,000 Credits', note: 'Best value per credit' },
   ];
 
   const usagePercent = user?.maxCredits

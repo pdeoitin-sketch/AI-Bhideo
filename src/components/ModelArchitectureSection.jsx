@@ -34,13 +34,13 @@ export const ModelArchitectureSection = () => {
       <div className="text-center max-w-3xl mx-auto mb-14">
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-300 text-xs font-mono font-bold mb-4">
           <Cpu className="w-3.5 h-3.5" />
-          <span>RESEARCH & NEURAL ARCHITECTURE</span>
+          <span>ILLUSTRATIVE PIPELINE MOCK-UP</span>
         </div>
         <h2 className="text-3xl sm:text-5xl font-display font-extrabold text-white tracking-tight">
-          Inside the <span className="gradient-text-neon">AI-Bhideo DiT</span> Engine
+          Video Pipeline <span className="gradient-text-neon">Concepts</span>
         </h2>
         <p className="mt-4 text-sm sm:text-base text-slate-300 leading-relaxed">
-          A 12-Billion parameter 3D Spatio-Temporal Diffusion Transformer engineered from scratch with continuous flow-matching, rotational positional embeddings (3D-RoPE), and physics-guided guidance loss.
+          This interactive section is a conceptual mock-up. The current app renders prompt-themed Canvas scenes and records them locally; no neural inference model, hosted GPU, or real model telemetry is connected.
         </p>
       </div>
 
@@ -51,12 +51,12 @@ export const ModelArchitectureSection = () => {
           <div>
             <h3 className="text-lg font-bold text-white flex items-center gap-2">
               <BrainCircuit className="w-5 h-5 text-brand-400" />
-              <span>Multi-Stage Diffusion Synthesis Pipeline</span>
+              <span>Conceptual Video Pipeline</span>
             </h3>
-            <p className="text-xs text-slate-400 mt-0.5">Click through stages to explore the mathematical transformations</p>
+            <p className="text-xs text-slate-400 mt-0.5">Example stages only; these do not run during the local canvas render</p>
           </div>
           <span className="text-xs font-mono px-2.5 py-1 rounded-lg bg-dark-900 border border-white/10 text-brand-300">
-            Transformer Depth: 64 Layers
+            Demo data only
           </span>
         </div>
 
@@ -166,7 +166,7 @@ export const ModelArchitectureSection = () => {
               onChange={(e) => setSimCfg(parseFloat(e.target.value))}
               className="w-full accent-brand-500 h-2 bg-dark-900 rounded-lg cursor-pointer"
             />
-            <p className="text-[11px] text-slate-500 mt-1">Controls prompt adherence fidelity versus creative hallucination.</p>
+            <p className="text-[11px] text-slate-500 mt-1">Illustrative slider only; it does not change the current browser render.</p>
           </div>
 
           {/* Motion Slider */}
@@ -184,7 +184,7 @@ export const ModelArchitectureSection = () => {
               onChange={(e) => setSimMotion(parseFloat(e.target.value))}
               className="w-full accent-cyan-500 h-2 bg-dark-900 rounded-lg cursor-pointer"
             />
-            <p className="text-[11px] text-slate-500 mt-1">Controls optical flow intensity and inter-frame kinetic acceleration.</p>
+            <p className="text-[11px] text-slate-500 mt-1">Illustrative slider only; it does not change the current browser render.</p>
           </div>
         </div>
 
@@ -214,59 +214,41 @@ export const ModelArchitectureSection = () => {
           </div>
 
           <div className="p-4 rounded-2xl bg-brand-500/10 border border-brand-500/20 text-xs text-brand-300 leading-relaxed">
-            💡 <strong>Optimal Recommendation:</strong> A CFG of 7.0–8.5 paired with Motion Intensity 6.0 yields maximum photorealism with zero temporal degradation across 16s video sequences.
+            💡 <strong>Demo controls:</strong> The values above are for interface illustration and are not sent to an AI model in this static build.
           </div>
         </div>
 
       </div>
 
-      {/* Model Benchmark Comparison Table */}
-      <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-white/10 overflow-x-auto">
-        <h3 className="text-lg font-bold text-white mb-4">
-          Architectural Benchmark Matrix
-        </h3>
-
-        <table className="w-full text-left text-xs">
-          <thead>
-            <tr className="border-b border-white/10 text-slate-400 font-mono">
-              <th className="pb-3 pr-4">Video Model Pipeline</th>
-              <th className="pb-3 px-4">Architecture</th>
-              <th className="pb-3 px-4">Max Resolution</th>
-              <th className="pb-3 px-4">Temporal Flicker</th>
-              <th className="pb-3 px-4">FPS Cadence</th>
-              <th className="pb-3 pl-4 text-right">Inference Speed</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-white/5 font-medium">
-            <tr className="bg-brand-500/10 text-white font-bold">
-              <td className="py-3.5 pr-4 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-brand-cyan" />
-                <span>AI-Bhideo Cinema v3</span>
-              </td>
-              <td className="py-3.5 px-4 text-brand-300">3D-RoPE DiT (12B)</td>
-              <td className="py-3.5 px-4 text-emerald-400">3840×2160 (Native 4K)</td>
-              <td className="py-3.5 px-4 text-emerald-400">&lt; 0.2% (Imperceptible)</td>
-              <td className="py-3.5 px-4">60 FPS Native</td>
-              <td className="py-3.5 pl-4 text-right text-brand-cyan font-mono">0.8s / frame</td>
-            </tr>
-            <tr className="text-slate-300">
-              <td className="py-3.5 pr-4">Standard 3D U-Net Model</td>
-              <td className="py-3.5 px-4">Conv3D + Self-Attention</td>
-              <td className="py-3.5 px-4">1280×720 (720p)</td>
-              <td className="py-3.5 px-4 text-rose-400">8.4% (Noticeable Morphing)</td>
-              <td className="py-3.5 px-4">24 FPS</td>
-              <td className="py-3.5 pl-4 text-right text-slate-400 font-mono">4.5s / frame</td>
-            </tr>
-            <tr className="text-slate-300">
-              <td className="py-3.5 pr-4">Legacy 2D Frame Interpolator</td>
-              <td className="py-3.5 px-4">Optical Flow Morphing</td>
-              <td className="py-3.5 px-4">1920×1080 (1080p)</td>
-              <td className="py-3.5 px-4 text-amber-400">14.2% (Smearing)</td>
-              <td className="py-3.5 px-4">30 FPS</td>
-              <td className="py-3.5 pl-4 text-right text-slate-400 font-mono">6.2s / frame</td>
-            </tr>
-          </tbody>
-        </table>
+      {/* Current renderer facts */}
+      <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-white/10">
+        <h3 className="text-lg font-bold text-white mb-4">Current Browser Renderer</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
+          <div className="p-4 rounded-2xl bg-dark-900/80 border border-white/5">
+            <p className="text-slate-500">Render engine</p>
+            <p className="text-white font-semibold mt-1">Prompt-themed Canvas animation</p>
+          </div>
+          <div className="p-4 rounded-2xl bg-dark-900/80 border border-white/5">
+            <p className="text-slate-500">Video export</p>
+            <p className="text-white font-semibold mt-1">WebM or MP4 via MediaRecorder</p>
+          </div>
+          <div className="p-4 rounded-2xl bg-dark-900/80 border border-white/5">
+            <p className="text-slate-500">Canvas size</p>
+            <p className="text-white font-semibold mt-1">Up to 1280px on the long edge</p>
+          </div>
+          <div className="p-4 rounded-2xl bg-dark-900/80 border border-white/5">
+            <p className="text-slate-500">Clip duration</p>
+            <p className="text-white font-semibold mt-1">Up to 16 seconds, captured in real time</p>
+          </div>
+          <div className="p-4 rounded-2xl bg-dark-900/80 border border-white/5">
+            <p className="text-slate-500">Prompt mapping</p>
+            <p className="text-white font-semibold mt-1">Theme plus a few recognized subject shapes</p>
+          </div>
+          <div className="p-4 rounded-2xl bg-dark-900/80 border border-white/5">
+            <p className="text-slate-500">Hosted AI inference</p>
+            <p className="text-white font-semibold mt-1">Not configured in this static demo</p>
+          </div>
+        </div>
       </div>
 
     </section>

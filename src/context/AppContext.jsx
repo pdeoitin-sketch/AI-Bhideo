@@ -7,6 +7,8 @@ import {
   INSPIRATION_PROMPTS 
 } from '../data/mockData';
 import { readJSON, writeJSON } from '../utils/safeStorage';
+import { inferPromptTheme } from '../utils/videoRecorder';
+import { deleteVideoBlob, getVideoBlob, saveVideoBlob } from '../utils/videoStorage';
 
 const AppContext = createContext();
 
@@ -105,6 +107,59 @@ export const AppProvider = ({ children }) => {
   const [generationStage, setGenerationStage] = useState('');
   const [generationEta, setGenerationEta] = useState(0);
   const [activeGeneratedVideo, setActiveGeneratedVideo] = useState(null);
+  const [videoAssets, setVideoAssets] = useState({});
+  const videoAssetsRef = useRef(videoAssets);
+
+  useEffect(() => {
+    videoAssetsRef.current = videoAssets;
+  }, [videoAssets]);
+
+  // Load saved video files from IndexedDB. Metadata stays in localStorage, but
+  // video blobs belong in IndexedDB so an 8-second clip cannot exhaust the
+  // browser's small localStorage quota.
+  useEffect(() => {
+    let isMounted = true;
+    const savedVideos = Array.from(new Map(
+      [...userCreations, ...communityVideos]
+        .filter((video) => video?.assetId)
+        .map((video) => [video.assetId, video])
+    ).values());
+
+    Promise.all(savedVideos.map(async (video) => [video.assetId, await getVideoBlob(video.assetId)]))
+      .then((entries) => {
+        if (!isMounted || typeof URL === 'undefined' || !URL.createObjectURL) return;
+        setVideoAssets((previous) => {
+          const next = { ...previous };
+          entries.forEach(([assetId, blob]) => {
+            if (!blob || next[assetId]) return;
+            next[assetId] = {
+              url: URL.createObjectURL(blob),
+              mimeType: blob.type || 'video/webm',
+              extension: (blob.type || '').includes('mp4') ? 'mp4' : 'webm',
+            };
+          });
+          return next;
+        });
+      })
+      .catch(() => {
+        // The gallery falls back to its procedural preview when a saved asset
+        // is unavailable; a storage read should never break the app shell.
+      });
+
+    return () => {
+      isMounted = false;
+    };
+    // These arrays are the initial persisted library. New renders register
+    // their Blob URL directly when generation completes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Release object URLs when the app provider is removed.
+  useEffect(() => () => {
+    Object.values(videoAssetsRef.current).forEach((asset) => {
+      if (asset?.url && typeof URL !== 'undefined') URL.revokeObjectURL(asset.url);
+    });
+  }, []);
 
   // Lightbox / Modal States
   const [activeLightboxVideo, setActiveLightboxVideo] = useState(null);
@@ -149,113 +204,157 @@ export const AppProvider = ({ children }) => {
     setToastMessage(null);
   };
 
-  // Generation timer ref: the simulation must never outlive the provider.
+  // Render progress and toast timers are cleaned up with the provider.
   const generationTimerRef = useRef(null);
+  const isGeneratingRef = useRef(false);
   useEffect(() => () => {
     if (generationTimerRef.current) clearInterval(generationTimerRef.current);
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    isGeneratingRef.current = false;
   }, []);
 
-  // Generate Video Simulation Pipeline
-  const startVideoGeneration = () => {
-    if (!prompt.trim()) {
-      showToast('Prompt Required', 'Please enter a prompt to generate your AI video.', 'error');
+  // Capture the live scene into an actual video Blob. The canvas recorder is
+  // supplied by PromptStudio; credits are charged only after a non-empty video
+  // file has been produced successfully.
+  const startVideoGeneration = async (renderVideo) => {
+    if (isGeneratingRef.current) return;
+
+    const promptSnapshot = prompt.trim();
+    if (!promptSnapshot) {
+      showToast('Prompt Required', 'Please enter a prompt before rendering a video.', 'error');
       return;
     }
 
-    const creditCost = selectedModel.creditCost;
-    if (user.credits < creditCost) {
-      showToast('Insufficient Credits', `You need ${creditCost} credits for ${selectedModel.name}. Please recharge or upgrade.`, 'warning');
+    const modelSnapshot = selectedModel;
+    const creditCost = Math.max(0, Number(modelSnapshot?.creditCost) || 0);
+    if ((Number(user?.credits) || 0) < creditCost) {
+      showToast('Insufficient Credits', `You need ${creditCost} credits for ${modelSnapshot.name}. Please recharge or upgrade.`, 'warning');
       setIsUpgradeModalOpen(true);
       return;
     }
 
-    // Deduct credits
-    setUser(prev => ({
-      ...prev,
-      credits: prev.credits - creditCost,
-      stats: {
-        ...prev.stats,
-        videosGenerated: prev.stats.videosGenerated + 1,
-        renderTimeSavedHours: +(prev.stats.renderTimeSavedHours + 0.4).toFixed(1)
-      }
-    }));
+    if (typeof renderVideo !== 'function') {
+      showToast('Video Renderer Not Ready', 'Open the studio again and retry the render.', 'error');
+      return;
+    }
 
+    const durationSeconds = Math.max(1, parseInt(selectedDuration, 10) || 8);
+    const fps = Math.max(1, Number(selectedFps) || 24);
+    const startedAt = Date.now();
+    isGeneratingRef.current = true;
     setIsGenerating(true);
     setGenerationProgress(0);
-    setGenerationStage('Initializing Dual Text Encoders (CLIP + T5-XXL)...');
-    setGenerationEta(8);
+    setGenerationStage('Preparing prompt and scene settings...');
+    setGenerationEta(durationSeconds);
 
-    // Dynamic theme derivation
-    const pLower = prompt.toLowerCase();
-    let theme = 'generic';
-    if (pLower.includes('cyber') || pLower.includes('neon') || pLower.includes('tokyo') || pLower.includes('rain') || pLower.includes('car')) theme = 'cyberpunk';
-    else if (pLower.includes('space') || pLower.includes('star') || pLower.includes('galaxy') || pLower.includes('astron') || pLower.includes('singularity')) theme = 'space';
-    else if (pLower.includes('temple') || pLower.includes('forest') || pLower.includes('bioluminescent') || pLower.includes('plant') || pLower.includes('moss')) theme = 'temple';
-    else if (pLower.includes('anime') || pLower.includes('ghibli') || pLower.includes('cloud') || pLower.includes('sky') || pLower.includes('sunset')) theme = 'anime';
-    else if (pLower.includes('fluid') || pLower.includes('gold') || pLower.includes('liquid') || pLower.includes('splash') || pLower.includes('water')) theme = 'fluid';
+    const updateProgress = (rawProgress) => {
+      const progress = Math.max(0, Math.min(99, Math.floor(Number(rawProgress) || 0)));
+      const stage = progress < 5
+        ? 'Preparing prompt-themed scene...'
+        : progress < 88
+          ? 'Rendering animated video frames in your browser...'
+          : 'Encoding and finalizing the video file...';
+      const elapsed = (Date.now() - startedAt) / 1000;
+      setGenerationProgress(progress);
+      setGenerationStage(stage);
+      setGenerationEta(Math.max(0, Math.ceil(durationSeconds - elapsed)));
+    };
 
-    const stages = [
-      { progress: 15, stage: 'Text Tokenization & Multimodal Latent Projection...', eta: 7 },
-      { progress: 35, stage: '3D Latent Spatio-Temporal Noise Injection (Seed ' + seed + ')...', eta: 5 },
-      { progress: 65, stage: 'Cross-Attention Temporal Flow Denoising (Step 32/50)...', eta: 3 },
-      { progress: 85, stage: '4K Latent Super-Resolution & Motion Vector Alignment...', eta: 2 },
-      { progress: 95, stage: 'Neural Frame Interpolation & 60FPS Render Encoding...', eta: 1 },
-      { progress: 100, stage: 'Synthesis Complete! Loading Master Output...', eta: 0 }
-    ];
-
-    let currentStep = 0;
     if (generationTimerRef.current) clearInterval(generationTimerRef.current);
-    const interval = setInterval(() => {
-      if (currentStep < stages.length) {
-        setGenerationProgress(stages[currentStep].progress);
-        setGenerationStage(stages[currentStep].stage);
-        setGenerationEta(stages[currentStep].eta);
-        currentStep++;
-      } else {
-        clearInterval(interval);
-        generationTimerRef.current = null;
-        setIsGenerating(false);
+    generationTimerRef.current = setInterval(() => {
+      updateProgress(Math.min(99, ((Date.now() - startedAt) / (durationSeconds * 1000)) * 100));
+    }, 500);
 
-        const newVideo = {
-          id: `gen-${Date.now()}`,
-          title: prompt.slice(0, 42) + '...',
-          prompt: prompt,
-          negativePrompt: negativePrompt,
-          model: selectedModel.name,
-          modelId: selectedModel.id,
-          aspectRatio: selectedAspectRatio,
-          duration: selectedDuration,
-          fps: selectedFps,
-          resolution: selectedModel.resolution,
-          seed: seed,
-          motionScore: motionStrength,
-          camera: cameraPreset,
-          author: {
-            name: user.name,
-            handle: user.handle,
-            avatar: user.avatar,
-            badge: user.tier.toUpperCase()
-          },
-          likes: 1,
-          views: 1,
-          category: 'My Generations',
-          theme: theme,
-          isLiked: true,
-          createdAt: 'Just now',
-          status: 'completed'
-        };
-
-        setActiveGeneratedVideo(newVideo);
-        setUserCreations(prev => [newVideo, ...prev]);
-        setCommunityVideos(prev => [newVideo, ...prev]);
-        showToast('Video Synthesized!', `Your 4K AI video was created successfully with ${selectedModel.name}.`, 'success');
-        
-        // Regenerate seed for next generation
-        setSeed(Math.floor(Math.random() * 1000000000));
+    try {
+      const output = await renderVideo({
+        durationSeconds,
+        fps,
+        onProgress: updateProgress,
+      });
+      if (!output?.blob || output.blob.size === 0) {
+        throw new Error('The browser returned an empty video file. Please try again.');
       }
-    }, 1100);
-    generationTimerRef.current = interval;
+      if (typeof URL === 'undefined' || typeof URL.createObjectURL !== 'function') {
+        throw new Error('This browser cannot open the rendered video file.');
+      }
+
+      const id = `gen-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const assetId = id;
+      const videoUrl = URL.createObjectURL(output.blob);
+      const title = promptSnapshot.length > 60 ? `${promptSnapshot.slice(0, 60).trim()}…` : promptSnapshot;
+      const newVideo = {
+        id,
+        assetId,
+        title,
+        prompt: promptSnapshot,
+        negativePrompt,
+        model: modelSnapshot.name,
+        modelId: modelSnapshot.id,
+        aspectRatio: selectedAspectRatio,
+        duration: selectedDuration,
+        durationSeconds,
+        fps,
+        resolution: `${output.width}×${output.height} (Browser Render)`,
+        seed,
+        motionScore: motionStrength,
+        camera: cameraPreset,
+        author: {
+          name: user.name,
+          handle: user.handle,
+          avatar: user.avatar,
+          badge: String(user.tier || 'Creator').toUpperCase(),
+        },
+        likes: 1,
+        views: 1,
+        category: 'My Generations',
+        theme: inferPromptTheme(promptSnapshot),
+        isLiked: true,
+        createdAt: 'Just now',
+        status: 'completed',
+        mimeType: output.mimeType,
+        fileExtension: output.extension,
+      };
+
+      // Keep a session URL for the player and persist the Blob separately from
+      // localStorage so the actual clip remains available after a reload.
+      setVideoAssets((previous) => ({
+        ...previous,
+        [assetId]: {
+          url: videoUrl,
+          mimeType: output.mimeType,
+          extension: output.extension,
+        },
+      }));
+      await saveVideoBlob(assetId, output.blob);
+
+      setGenerationProgress(100);
+      setGenerationStage('Video file ready.');
+      setGenerationEta(0);
+      setUser((previous) => ({
+        ...previous,
+        credits: Math.max(0, (Number(previous.credits) || 0) - creditCost),
+        stats: {
+          ...MOCK_USER.stats,
+          ...(previous.stats || {}),
+          videosGenerated: (Number(previous.stats?.videosGenerated) || 0) + 1,
+          renderTimeSavedHours: +((Number(previous.stats?.renderTimeSavedHours) || 0) + 0.4).toFixed(1),
+        },
+      }));
+      setActiveGeneratedVideo(newVideo);
+      setUserCreations((previous) => [newVideo, ...previous]);
+      setCommunityVideos((previous) => [newVideo, ...previous]);
+      showToast('Video Ready', `Your ${durationSeconds}s ${output.extension.toUpperCase()} clip is ready to play and download.`, 'success');
+      setSeed(Math.floor(Math.random() * 1_000_000_000));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'The browser could not render this video.';
+      setGenerationStage('Render failed. No credits were charged.');
+      showToast('Video Render Failed', `${message} No credits were charged.`, 'error');
+    } finally {
+      if (generationTimerRef.current) clearInterval(generationTimerRef.current);
+      generationTimerRef.current = null;
+      isGeneratingRef.current = false;
+      setIsGenerating(false);
+    }
   };
 
   // Magic Prompt Enhancer with Cinema Terms
@@ -330,6 +429,16 @@ export const AppProvider = ({ children }) => {
   // function" inside an event handler and React tore down the entire tree,
   // leaving a blank page.
   const deleteCreation = (videoId) => {
+    const video = [...userCreations, ...communityVideos].find((entry) => entry.id === videoId);
+    const assetId = video?.assetId || videoId;
+    const existingAsset = videoAssetsRef.current[assetId];
+    if (existingAsset?.url && typeof URL !== 'undefined') URL.revokeObjectURL(existingAsset.url);
+    setVideoAssets((previous) => {
+      const next = { ...previous };
+      delete next[assetId];
+      return next;
+    });
+    deleteVideoBlob(assetId);
     setUserCreations((prev) => prev.filter((v) => v.id !== videoId));
     setCommunityVideos((prev) => prev.filter((v) => v.id !== videoId));
     setActiveGeneratedVideo((prev) => (prev && prev.id === videoId ? null : prev));
@@ -462,6 +571,7 @@ export const AppProvider = ({ children }) => {
         generationEta,
         activeGeneratedVideo,
         setActiveGeneratedVideo,
+        videoAssets,
         startVideoGeneration,
         enhancePrompt,
         setRandomInspiration,
