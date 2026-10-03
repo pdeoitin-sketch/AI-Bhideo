@@ -467,6 +467,7 @@ export const AppProvider = ({ children }) => {
         setRandomInspiration,
         toggleLikeVideo,
         remixPrompt,
+        copyToClipboard,
         copyPrompt,
         activeLightboxVideo,
         setActiveLightboxVideo,

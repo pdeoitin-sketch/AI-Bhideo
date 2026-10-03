@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 
 export const HeroSection = ({ onOpenStudio }) => {
-  const { setCurrentView, setRandomInspiration, setIsPromptAssistantOpen } = useApp();
+  const { setCurrentView, setPrompt, setRandomInspiration, setIsPromptAssistantOpen, showToast } = useApp();
 
   return (
     <section className="relative overflow-hidden pt-8 pb-16 lg:pt-14 lg:pb-24">
@@ -91,7 +91,9 @@ export const HeroSection = ({ onOpenStudio }) => {
           </button>
           <button 
             onClick={() => {
+              setPrompt('A sleek chrome hypercar gliding through rain-slicked Tokyo streets at midnight, vibrant holographic neon signs reflecting on wet asphalt, cinematic 35mm anamorphic lens, 8k resolution');
               setCurrentView('studio');
+              if (showToast) showToast('Prompt Loaded', 'Loaded: "Cyberpunk Tokyo Rain"', 'info');
             }}
             className="px-3 py-1.5 rounded-lg bg-dark-900/80 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white transition-colors"
           >
@@ -99,7 +101,9 @@ export const HeroSection = ({ onOpenStudio }) => {
           </button>
           <button 
             onClick={() => {
+              setPrompt('First-person POV drifting into a glowing purple and gold supermassive black hole singularity, gravitational lensing bending starlight, interstellar cosmic dust, IMAX 70mm 8k');
               setCurrentView('studio');
+              if (showToast) showToast('Prompt Loaded', 'Loaded: "Cosmic Wormhole Singularity"', 'info');
             }}
             className="px-3 py-1.5 rounded-lg bg-dark-900/80 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white transition-colors"
           >
