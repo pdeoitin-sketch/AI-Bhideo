@@ -16,7 +16,7 @@ import {
 import { ProceduralVideoEngine } from '../utils/proceduralVideoGenerator';
 
 export const VideoCard = ({ video }) => {
-  const { toggleLikeVideo, remixPrompt, copyPrompt, setActiveLightboxVideo, showToast } = useApp();
+  const { toggleLikeVideo, remixPrompt, copyPrompt, copyToClipboard, setActiveLightboxVideo, showToast } = useApp();
   const [isHovered, setIsHovered] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
@@ -36,19 +36,21 @@ export const VideoCard = ({ video }) => {
         cameraPreset: video.camera || 'static'
       });
 
-      // Render first static frame
-      engine.render(performance.now());
+      // Render a single static poster frame. The engine no longer auto-starts
+      // a rAF loop, so idle cards cost nothing until they are hovered.
+      engine.renderStaticFrame();
       engineRef.current = engine;
     }
 
     return () => {
       if (engineRef.current) engineRef.current.destroy();
+      engineRef.current = null;
     };
   }, [video]);
 
   const handleMouseEnter = () => {
     setIsHovered(true);
-    if (engineRef.current) {
+    if (engineRef.current && !engineRef.current.destroyed) {
       engineRef.current.play();
       setIsPlaying(true);
     }
@@ -56,7 +58,7 @@ export const VideoCard = ({ video }) => {
 
   const handleMouseLeave = () => {
     setIsHovered(false);
-    if (engineRef.current) {
+    if (engineRef.current && !engineRef.current.destroyed) {
       engineRef.current.pause();
       setIsPlaying(false);
     }
@@ -81,7 +83,7 @@ export const VideoCard = ({ video }) => {
 
   const handleShare = (e) => {
     e.stopPropagation();
-    navigator.clipboard.writeText(window.location.origin + '?vid=' + video.id);
+    copyToClipboard(`${window.location.origin}?vid=${video.id}`);
     showToast('Link Copied!', `Share link for "${video.title}" copied to clipboard.`, 'success');
   };
 

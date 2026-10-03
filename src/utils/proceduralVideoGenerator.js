@@ -17,7 +17,11 @@ export class ProceduralVideoEngine {
     this.startTime = null;
     this.paused = false;
     this.currentTime = 0;
-    this.isPlaying = true;
+    // Engines start paused on purpose: `render()` used to kick off a rAF loop
+    // immediately, so every card on screen animated forever at 60fps and
+    // `play()` stacked extra loops on top. Callers now opt in with play().
+    this.isPlaying = false;
+    this.destroyed = false;
     this.particles = [];
     this.initThemeState();
   }
@@ -67,9 +71,12 @@ export class ProceduralVideoEngine {
   }
 
   render(timestamp) {
+    if (this.destroyed || !this.ctx) return;
+
     if (!this.startTime) this.startTime = timestamp;
     if (!this.paused) {
-      this.currentTime = ((timestamp - this.startTime) / 1000) % this.options.duration;
+      const duration = Math.max(0.1, this.options.duration || 8);
+      this.currentTime = ((timestamp - this.startTime) / 1000) % duration;
     }
 
     const t = this.currentTime;
@@ -110,9 +117,36 @@ export class ProceduralVideoEngine {
 
     ctx.restore();
 
-    if (this.isPlaying) {
-      this.animationFrameId = requestAnimationFrame((ts) => this.render(ts));
+    if (this.isPlaying && !this.destroyed) {
+      this.animationFrameId = this.requestFrame((ts) => this.render(ts));
     }
+  }
+
+  // Small indirection so the engine still works in environments without rAF
+  // (SSR/tests) instead of throwing on load.
+  requestFrame(callback) {
+    if (typeof requestAnimationFrame === 'function') {
+      return requestAnimationFrame(callback);
+    }
+    return setTimeout(() => callback(Date.now()), 1000 / (this.options.fps || 60));
+  }
+
+  cancelFrame(id) {
+    if (id == null) return;
+    if (typeof cancelAnimationFrame === 'function') cancelAnimationFrame(id);
+    else clearTimeout(id);
+  }
+
+  /** Draw a single static frame without starting the animation loop. */
+  renderStaticFrame() {
+    if (this.destroyed || !this.ctx) return;
+    const wasPlaying = this.isPlaying;
+    const wasPaused = this.paused;
+    this.isPlaying = false;
+    this.paused = true;
+    this.render(0);
+    this.isPlaying = wasPlaying;
+    this.paused = wasPaused;
   }
 
   renderCyberpunk(ctx, w, h, t) {
@@ -470,25 +504,41 @@ export class ProceduralVideoEngine {
   }
 
   play() {
-    this.isPlaying = true;
+    if (this.destroyed) return;
     this.paused = false;
-    this.render(performance.now());
+    // Guard against stacking several rAF loops when play() is called repeatedly
+    // (e.g. hovering a card in and out quickly).
+    if (this.isPlaying) return;
+    this.isPlaying = true;
+    this.startTime = null;
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    this.render(now);
   }
 
   pause() {
     this.paused = true;
     this.isPlaying = false;
-    if (this.animationFrameId) {
-      cancelAnimationFrame(this.animationFrameId);
-    }
+    this.cancelFrame(this.animationFrameId);
+    this.animationFrameId = null;
   }
 
   seek(timeInSeconds) {
-    this.currentTime = Math.max(0, Math.min(this.options.duration, timeInSeconds));
-    this.render(performance.now());
+    if (this.destroyed) return;
+    const duration = this.options.duration || 8;
+    this.currentTime = Math.max(0, Math.min(duration, timeInSeconds));
+    this.startTime = null;
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    const wasPlaying = this.isPlaying;
+    this.isPlaying = false;
+    this.render(now);
+    this.isPlaying = wasPlaying;
   }
 
   destroy() {
+    if (this.destroyed) return;
+    this.destroyed = true;
     this.pause();
+    this.particles = [];
+    this.ctx = null;
   }
 }
