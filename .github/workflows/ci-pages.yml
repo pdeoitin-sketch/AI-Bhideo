@@ -1,0 +1,83 @@
+name: CI & GitHub Pages deploy
+
+# GitHub Pages for this repository deploys the *repository root* of `main`
+# (Settings -> Pages -> "Deploy from a branch"). That means whatever is
+# committed is what visitors get, and `index.html` loads the pre-compiled
+# `bundle/app.js`. Two things have to stay true or the site shows a blank page:
+#
+#   1. `bundle/` must be rebuilt whenever `src/` changes (job: verify-bundle).
+#   2. Pages must actually run a build after a push to `main` (job: trigger-pages-build).
+#
+# (2) is not guaranteed — GitHub skipped the Pages build for the merge of
+# PR #3, leaving the site on the previous commit. So we ask for the build
+# explicitly instead of relying on the implicit trigger.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  verify-bundle:
+    name: Build and check that bundle/ is not stale
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build (also refreshes bundle/app.js, bundle/app.css and 404.html)
+        run: npm run build
+
+      - name: Fail if the committed bundle does not match src/
+        run: |
+          dirty="$(git status --porcelain -- bundle 404.html)"
+          if [ -n "$dirty" ]; then
+            echo "The committed bundle/ is out of date with src/:"
+            echo "$dirty"
+            echo ""
+            echo "::error::Run 'npm run build' and commit bundle/app.js, bundle/app.css and 404.html. GitHub Pages serves the repository root, so a stale bundle ships a broken or outdated site."
+            exit 1
+          fi
+          echo "bundle/ matches src/."
+
+  trigger-pages-build:
+    name: Request a GitHub Pages build
+    needs: verify-bundle
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+    steps:
+      - name: Ask Pages to build ${{ github.ref_name }} @ ${{ github.sha }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -u
+          for attempt in 1 2 3 4 5; do
+            code="$(curl -s -o /tmp/pages.json -w '%{http_code}' -X POST \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/pages/builds")"
+            echo "attempt ${attempt}: HTTP ${code}"
+            cat /tmp/pages.json 2>/dev/null || true
+            echo ""
+            case "$code" in
+              201) echo "Pages build requested."; exit 0 ;;
+              400) echo "A Pages build is already queued or running - nothing to do."; exit 0 ;;
+              *)   sleep 20 ;;
+            esac
+          done
+          echo "::warning::Could not request a Pages build after 5 attempts. Push another commit or press 'Request a build' in Settings -> Pages."
