@@ -1,0 +1,535 @@
+import React, { useState } from 'react';
+import { useApp } from '../context/AppContext';
+import { VideoCard } from './VideoCard';
+import { 
+  User, 
+  Film, 
+  Zap, 
+  Key, 
+  Settings, 
+  Copy, 
+  Check, 
+  Plus, 
+  Trash2, 
+  Download, 
+  ExternalLink, 
+  Sparkles, 
+  ShieldCheck, 
+  Clock, 
+  HardDrive, 
+  Heart,
+  Code2
+} from 'lucide-react';
+
+export const UserProfile = () => {
+  const { user, setUser, userCreations, setUserCreations, setCurrentView, showToast, setIsUpgradeModalOpen } = useApp();
+  const [activeTab, setActiveTab] = useState('creations'); // 'creations' | 'credits' | 'api' | 'settings'
+  const [isEditingBio, setIsEditingBio] = useState(false);
+  const [bioInput, setBioInput] = useState(user.bio);
+  const [copiedKeyId, setCopiedKeyId] = useState(null);
+  const [newKeyName, setNewKeyName] = useState('');
+  const [showNewKeyModal, setShowNewKeyModal] = useState(false);
+
+  const handleSaveBio = () => {
+    setUser(prev => ({ ...prev, bio: bioInput }));
+    setIsEditingBio(false);
+    showToast('Profile Updated', 'Your bio has been saved.', 'success');
+  };
+
+  const handleCopyKey = (keyObj) => {
+    navigator.clipboard.writeText(keyObj.key);
+    setCopiedKeyId(keyObj.id);
+    showToast('API Key Copied', 'Secret API key copied to clipboard.', 'success');
+    setTimeout(() => setCopiedKeyId(null), 2000);
+  };
+
+  const handleCreateApiKey = () => {
+    if (!newKeyName.trim()) {
+      showToast('Key Name Required', 'Please provide a label for your new key.', 'warning');
+      return;
+    }
+
+    const randomSuffix = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    const newKey = {
+      id: `key_${Date.now()}`,
+      name: newKeyName.trim(),
+      key: `bh_live_${randomSuffix}`,
+      created: new Date().toISOString().split('T')[0],
+      lastUsed: 'Never',
+      callsCount: 0
+    };
+
+    setUser(prev => ({
+      ...prev,
+      apiKeys: [newKey, ...(prev.apiKeys || [])]
+    }));
+
+    setNewKeyName('');
+    setShowNewKeyModal(false);
+    showToast('API Key Created', `New key "${newKey.name}" is active.`, 'success');
+  };
+
+  const handleDeleteApiKey = (keyId) => {
+    setUser(prev => ({
+      ...prev,
+      apiKeys: (prev.apiKeys || []).filter(k => k.id !== keyId)
+    }));
+    showToast('Key Revoked', 'API key has been permanently deactivated.', 'info');
+  };
+
+  const handleDeleteCreation = (vidId) => {
+    setUserCreations(prev => prev.filter(v => v.id !== vidId));
+    showToast('Video Deleted', 'Removed from your library.', 'info');
+  };
+
+  return (
+    <div className="py-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      {/* Profile Header Banner */}
+      <div className="glass-panel rounded-3xl border border-white/10 overflow-hidden shadow-2xl mb-8">
+        
+        {/* Cover gradient */}
+        <div className="h-44 bg-gradient-to-r from-brand-900 via-dark-800 to-brand-950 relative overflow-hidden">
+          <div className="absolute inset-0 bg-grid-pattern opacity-40" />
+          <div className="absolute -bottom-10 -right-10 w-64 h-64 bg-brand-500/20 blur-[80px] rounded-full pointer-events-none" />
+          <div className="absolute top-4 right-4 flex items-center gap-2">
+            <span className="px-3 py-1 rounded-full bg-dark-950/80 backdrop-blur-md text-xs font-mono font-bold text-brand-300 border border-brand-500/30">
+              ⚡ {user.tier} Tier
+            </span>
+          </div>
+        </div>
+
+        {/* User Info Bar */}
+        <div className="px-6 sm:px-8 pb-6 pt-0 relative flex flex-col sm:flex-row sm:items-end justify-between gap-6">
+          <div className="flex flex-col sm:flex-row items-center sm:items-end gap-5 -mt-14 sm:-mt-16 text-center sm:text-left">
+            <img 
+              src={user.avatar} 
+              alt={user.name} 
+              className="w-28 h-28 rounded-2xl object-cover ring-4 ring-dark-950 shadow-2xl"
+            />
+            <div>
+              <div className="flex items-center justify-center sm:justify-start gap-2">
+                <h1 className="text-2xl font-bold text-white">{user.name}</h1>
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-brand-500/20 text-brand-300 border border-brand-500/40">
+                  VERIFIED
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 font-mono mt-0.5">{user.handle} • {user.email}</p>
+              
+              {/* Bio */}
+              <div className="mt-2 text-xs text-slate-300 max-w-xl">
+                {isEditingBio ? (
+                  <div className="flex gap-2 mt-1">
+                    <input
+                      type="text"
+                      value={bioInput}
+                      onChange={(e) => setBioInput(e.target.value)}
+                      className="bg-dark-900 border border-white/20 rounded-lg px-2.5 py-1 text-xs text-white w-full"
+                    />
+                    <button
+                      onClick={handleSaveBio}
+                      className="px-3 py-1 rounded-lg bg-brand-500 text-white font-semibold text-xs"
+                    >
+                      Save
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <p className="leading-relaxed">{user.bio}</p>
+                    <button 
+                      onClick={() => setIsEditingBio(true)}
+                      className="text-[10px] text-brand-400 hover:text-brand-300 underline shrink-0"
+                    >
+                      Edit
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-center sm:justify-end gap-2">
+            <button
+              onClick={() => setCurrentView('studio')}
+              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 text-white text-xs font-semibold shadow-lg shadow-brand-500/20 hover:scale-[1.02] transition-all flex items-center gap-1.5"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Create Video</span>
+            </button>
+            <button
+              onClick={() => setIsUpgradeModalOpen(true)}
+              className="px-4 py-2.5 rounded-xl bg-dark-900 border border-amber-500/40 text-amber-300 hover:text-amber-200 text-xs font-semibold transition-all flex items-center gap-1.5"
+            >
+              <Zap className="w-3.5 h-3.5 fill-amber-300" />
+              <span>Recharge ({user.credits} left)</span>
+            </button>
+          </div>
+        </div>
+
+        {/* User Stats Grid */}
+        <div className="border-t border-white/10 px-6 sm:px-8 py-4 bg-dark-900/50 grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+          <div>
+            <p className="text-xs text-slate-400 flex items-center justify-center gap-1">
+              <Film className="w-3.5 h-3.5 text-brand-400" />
+              <span>Videos Created</span>
+            </p>
+            <p className="text-xl font-bold font-mono text-white mt-1">{user.stats.videosGenerated}</p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-400 flex items-center justify-center gap-1">
+              <Clock className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Render Hours Saved</span>
+            </p>
+            <p className="text-xl font-bold font-mono text-cyan-400 mt-1">{user.stats.renderTimeSavedHours}h</p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-400 flex items-center justify-center gap-1">
+              <Heart className="w-3.5 h-3.5 text-pink-400" />
+              <span>Community Likes</span>
+            </p>
+            <p className="text-xl font-bold font-mono text-pink-400 mt-1">{user.stats.likesReceived}</p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-400 flex items-center justify-center gap-1">
+              <HardDrive className="w-3.5 h-3.5 text-purple-400" />
+              <span>Cloud Storage</span>
+            </p>
+            <p className="text-xl font-bold font-mono text-white mt-1">{user.stats.storageUsedGb} GB / 50 GB</p>
+          </div>
+        </div>
+
+      </div>
+
+      {/* Tabs Navigation */}
+      <div className="flex items-center gap-2 border-b border-white/10 pb-3 mb-8 overflow-x-auto">
+        <button
+          onClick={() => setActiveTab('creations')}
+          className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 ${
+            activeTab === 'creations'
+              ? 'bg-brand-500 text-white shadow-md shadow-brand-500/30'
+              : 'text-slate-300 hover:bg-white/5'
+          }`}
+        >
+          <Film className="w-3.5 h-3.5" />
+          <span>My Creations ({userCreations.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('credits')}
+          className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 ${
+            activeTab === 'credits'
+              ? 'bg-brand-500 text-white shadow-md shadow-brand-500/30'
+              : 'text-slate-300 hover:bg-white/5'
+          }`}
+        >
+          <Zap className="w-3.5 h-3.5" />
+          <span>Subscription & Credits</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('api')}
+          className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 ${
+            activeTab === 'api'
+              ? 'bg-brand-500 text-white shadow-md shadow-brand-500/30'
+              : 'text-slate-300 hover:bg-white/5'
+          }`}
+        >
+          <Key className="w-3.5 h-3.5" />
+          <span>API Keys & SDK</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('settings')}
+          className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 ${
+            activeTab === 'settings'
+              ? 'bg-brand-500 text-white shadow-md shadow-brand-500/30'
+              : 'text-slate-300 hover:bg-white/5'
+          }`}
+        >
+          <Settings className="w-3.5 h-3.5" />
+          <span>Studio Preferences</span>
+        </button>
+      </div>
+
+      {/* TAB 1: MY CREATIONS */}
+      {activeTab === 'creations' && (
+        <div>
+          {userCreations.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {userCreations.map(video => (
+                <div key={video.id} className="relative group/item">
+                  <VideoCard video={video} />
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteCreation(video.id);
+                    }}
+                    className="absolute top-3 right-3 p-1.5 rounded-lg bg-rose-500/80 hover:bg-rose-500 text-white opacity-0 group-hover/item:opacity-100 transition-opacity z-20 shadow-lg text-xs"
+                    title="Delete Video"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="glass-panel p-12 rounded-3xl border border-white/10 text-center max-w-md mx-auto">
+              <Film className="w-12 h-12 text-slate-500 mx-auto mb-3" />
+              <h3 className="text-base font-bold text-white">No Creations Yet</h3>
+              <p className="text-xs text-slate-400 mt-1">Jump into the studio and generate your first 4K AI video.</p>
+              <button
+                onClick={() => setCurrentView('studio')}
+                className="mt-4 px-4 py-2 rounded-xl bg-brand-500 text-white font-semibold text-xs"
+              >
+                Open Studio
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB 2: CREDITS & SUBSCRIPTION */}
+      {activeTab === 'credits' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <div className="lg:col-span-6 glass-panel p-6 rounded-3xl border border-white/10 space-y-6">
+            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+              <Zap className="w-5 h-5 text-amber-400" />
+              <span>Current GPU Compute Allocation</span>
+            </h3>
+
+            <div>
+              <div className="flex justify-between text-xs font-semibold text-slate-200 mb-2">
+                <span>Monthly Compute Usage</span>
+                <span className="font-mono text-amber-300">{user.credits} / {user.maxCredits} Credits Remaining</span>
+              </div>
+              <div className="w-full h-3 rounded-full bg-dark-900 border border-white/10 overflow-hidden">
+                <div 
+                  className="h-full bg-gradient-to-r from-amber-500 to-brand-500"
+                  style={{ width: `${(user.credits / user.maxCredits) * 100}%` }}
+                />
+              </div>
+              <p className="text-[11px] text-slate-400 mt-1.5">Renews automatically on the 1st of each billing cycle.</p>
+            </div>
+
+            <div className="pt-4 border-t border-white/10 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold text-white">Current Tier: {user.tier}</p>
+                <p className="text-[11px] text-slate-400">Includes 4K 60FPS video, camera director, and priority queue.</p>
+              </div>
+              <button
+                onClick={() => setIsUpgradeModalOpen(true)}
+                className="px-4 py-2 rounded-xl bg-brand-500 hover:bg-brand-400 text-white text-xs font-semibold"
+              >
+                Change Plan
+              </button>
+            </div>
+          </div>
+
+          <div className="lg:col-span-6 glass-panel p-6 rounded-3xl border border-white/10 space-y-4">
+            <h3 className="text-lg font-bold text-white">Instant Credit Recharge Booster</h3>
+            <p className="text-xs text-slate-400">Add one-time credits to your balance that never expire.</p>
+
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <div className="p-4 rounded-2xl bg-dark-900 border border-white/10 hover:border-amber-400/50 cursor-pointer transition-all text-center">
+                <p className="text-base font-bold text-white">+500 Credits</p>
+                <p className="text-xs font-mono text-amber-400 mt-0.5">$10 USD</p>
+                <button
+                  onClick={() => {
+                    setUser(prev => ({ ...prev, credits: prev.credits + 500 }));
+                    showToast('+500 Credits Added', 'Recharge successful!', 'success');
+                  }}
+                  className="mt-3 w-full py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-semibold text-white"
+                >
+                  Buy Pack
+                </button>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-dark-900 border border-brand-500/40 hover:border-brand-400 cursor-pointer transition-all text-center relative overflow-hidden">
+                <div className="absolute top-0 right-0 bg-brand-500 text-[9px] font-bold px-2 py-0.5 rounded-bl">BEST VALUE</div>
+                <p className="text-base font-bold text-white">+2,000 Credits</p>
+                <p className="text-xs font-mono text-brand-300 mt-0.5">$35 USD</p>
+                <button
+                  onClick={() => {
+                    setUser(prev => ({ ...prev, credits: prev.credits + 2000 }));
+                    showToast('+2,000 Credits Added', 'Recharge successful!', 'success');
+                  }}
+                  className="mt-3 w-full py-1.5 rounded-lg bg-brand-500 hover:bg-brand-400 text-xs font-semibold text-white shadow-md shadow-brand-500/30"
+                >
+                  Buy Pack
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3: DEVELOPER API KEYS & WEBHOOKS */}
+      {activeTab === 'api' && (
+        <div className="space-y-6">
+          <div className="glass-panel p-6 rounded-3xl border border-white/10">
+            <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-4 flex-wrap gap-2">
+              <div>
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <Key className="w-5 h-5 text-amber-400" />
+                  <span>Developer Secret API Keys</span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">Use these keys to authenticate REST and Python SDK requests.</p>
+              </div>
+
+              <button
+                onClick={() => setShowNewKeyModal(true)}
+                className="px-3.5 py-2 rounded-xl bg-brand-500 hover:bg-brand-400 text-white text-xs font-semibold flex items-center gap-1.5 shadow-md shadow-brand-500/20"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Create New Key</span>
+              </button>
+            </div>
+
+            {/* List of keys */}
+            <div className="space-y-3">
+              {(user.apiKeys || []).map((k) => (
+                <div key={k.id} className="p-4 rounded-2xl bg-dark-900 border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold text-sm text-white">{k.name}</p>
+                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">ACTIVE</span>
+                    </div>
+                    <p className="text-xs font-mono text-slate-400 mt-1">{k.key.slice(0, 12)}••••••••••••••••</p>
+                    <p className="text-[10px] text-slate-500 mt-1">Created: {k.created} • Total Calls: {k.callsCount}</p>
+                  </div>
+
+                  <div className="flex items-center gap-2 self-end sm:self-auto">
+                    <button
+                      onClick={() => handleCopyKey(k)}
+                      className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs font-medium text-slate-200 flex items-center gap-1.5 transition-colors"
+                    >
+                      {copiedKeyId === k.id ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                      <span>{copiedKeyId === k.id ? 'Copied' : 'Copy'}</span>
+                    </button>
+                    <button
+                      onClick={() => handleDeleteApiKey(k.id)}
+                      className="p-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-xs transition-colors"
+                      title="Revoke Key"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Quick Code Snippet Example */}
+          <div className="glass-panel p-6 rounded-3xl border border-white/10 space-y-3">
+            <h4 className="text-sm font-bold text-white flex items-center gap-2">
+              <Code2 className="w-4 h-4 text-brand-cyan" />
+              <span>Python SDK Generation Example</span>
+            </h4>
+            <div className="bg-dark-950 p-4 rounded-2xl font-mono text-xs text-slate-300 overflow-x-auto border border-white/5">
+              <pre>{`import bhideo
+
+client = bhideo.Client(api_key="${user.apiKeys?.[0]?.key || 'bh_live_...'}")
+
+# Generate 4K video using Bhideo Cinema v3
+job = client.video.generate(
+    prompt="Cyberpunk rain city at midnight, neon reflections, 35mm anamorphic 8k",
+    model="bhideo-cinema-v3",
+    aspect_ratio="16:9",
+    duration=8,
+    fps=60,
+    camera="pan-right"
+)
+
+# Stream or download final MP4 master
+video = job.wait_for_completion()
+print(f"Rendered video URL: {video.url}")`}</pre>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 4: STUDIO PREFERENCES */}
+      {activeTab === 'settings' && (
+        <div className="glass-panel p-6 rounded-3xl border border-white/10 max-w-2xl space-y-6">
+          <h3 className="text-lg font-bold text-white">Studio Engine Preferences</h3>
+
+          <div className="space-y-4 text-xs">
+            <div>
+              <label className="font-semibold text-slate-200 block mb-1">Default Video Synthesis Model</label>
+              <select className="w-full bg-dark-900 border border-white/10 rounded-xl p-2.5 text-slate-200">
+                <option>Bhideo Cinema v3 (Ultra 4K Flagship)</option>
+                <option>Bhideo Turbo v2.1 (Fast Ideation)</option>
+                <option>Bhideo Motion Pro (Zero-Smear Physics)</option>
+                <option>Bhideo Anime-X (Stylized VFX)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="font-semibold text-slate-200 block mb-1">Default Output Resolution</label>
+              <select className="w-full bg-dark-900 border border-white/10 rounded-xl p-2.5 text-slate-200">
+                <option>Native 4K (3840×2160)</option>
+                <option>Full HD 1080p (1920×1080)</option>
+                <option>Quad HD 2K (2560×1440)</option>
+              </select>
+            </div>
+
+            <div className="flex items-center justify-between p-3 rounded-xl bg-dark-900 border border-white/5">
+              <div>
+                <p className="font-semibold text-slate-200">Auto-Enhance Prompts</p>
+                <p className="text-slate-400 text-[11px]">Automatically add 35mm lighting and DaVinci color tokens</p>
+              </div>
+              <input type="checkbox" defaultChecked className="accent-brand-500 w-4 h-4 cursor-pointer" />
+            </div>
+
+            <div className="flex items-center justify-between p-3 rounded-xl bg-dark-900 border border-white/5">
+              <div>
+                <p className="font-semibold text-slate-200">NSFW Safety Filter Strength</p>
+                <p className="text-slate-400 text-[11px]">Standard multi-layer neural content moderation</p>
+              </div>
+              <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono text-[10px]">Strict Safety</span>
+            </div>
+          </div>
+
+          <button
+            onClick={() => showToast('Preferences Saved', 'Studio default parameters updated.', 'success')}
+            className="px-5 py-2.5 rounded-xl bg-brand-500 text-white font-semibold text-xs shadow-md shadow-brand-500/20"
+          >
+            Save Preferences
+          </button>
+        </div>
+      )}
+
+      {/* New API Key Modal */}
+      {showNewKeyModal && (
+        <div className="fixed inset-0 bg-dark-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="glass-panel p-6 rounded-3xl border border-white/10 max-w-md w-full animate-fade-in space-y-4">
+            <h3 className="text-base font-bold text-white">Generate Secret API Key</h3>
+            <p className="text-xs text-slate-400">Give this key a descriptive label (e.g., Production Backend, CLI Tool).</p>
+            <input
+              type="text"
+              value={newKeyName}
+              onChange={(e) => setNewKeyName(e.target.value)}
+              placeholder="e.g. Production Webhook Server"
+              className="w-full bg-dark-900 border border-white/10 rounded-xl p-3 text-xs text-white"
+            />
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                onClick={() => setShowNewKeyModal(false)}
+                className="px-4 py-2 rounded-xl bg-white/5 text-xs text-slate-300"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateApiKey}
+                className="px-4 py-2 rounded-xl bg-brand-500 text-white text-xs font-semibold"
+              >
+                Create Key
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+};
