@@ -47,6 +47,37 @@
         Please enable JavaScript to run AI-Bhideo Neural Video Synthesis Studio.
       </div>
     </noscript>
+    <script data-bundle-watchdog>
+      // If the prebuilt bundle cannot be fetched (a stale Pages deployment where
+      // bundle/app.js does not exist yet, a bad upload, an offline CDN…) the page
+      // would otherwise sit on the splash forever and look like a blank screen.
+      // Registered before the tag below is parsed, in the capture phase, so the
+      // resource error is caught even though the element does not exist yet.
+      window.addEventListener(
+        'error',
+        function (event) {
+          var target = event && event.target;
+          if (!target || target.tagName !== 'SCRIPT') return;
+          if (!/bundle\/app\.js$/.test(target.src || '')) return;
+          var root = document.getElementById('root');
+          if (!root) return;
+          var note = document.createElement('div');
+          note.setAttribute(
+            'style',
+            'max-width:560px;margin:28px auto 0;padding:18px 20px;border:1px solid #334155;border-radius:14px;background:#0b0f19;color:#f8fafc;font-size:13px;line-height:1.7;text-align:left;'
+          );
+          note.innerHTML =
+            '<strong style="color:#f472b6;">Could not load bundle/app.js</strong><br />' +
+            'The deployed build is missing or out of date. Run ' +
+            '<code style="font-family:\'JetBrains Mono\',monospace;color:#67e8f9;">npm run build</code>' +
+            ' and commit <code style="font-family:\'JetBrains Mono\',monospace;color:#67e8f9;">bundle/</code>, ' +
+            'then make sure GitHub Pages rebuilt from the latest commit on ' +
+            '<code style="font-family:\'JetBrains Mono\',monospace;color:#67e8f9;">main</code>.';
+          root.appendChild(note);
+        },
+        true
+      );
+    </script>
     <script defer src="./bundle/app.js" data-prebuilt-js></script>
   </body>
 </html>

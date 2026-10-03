@@ -69,7 +69,7 @@ The studio is defensive by design so that a single failure can never leave a bla
 - **Canvas engine fixes**: `ProceduralVideoEngine` no longer auto-starts a `requestAnimationFrame` loop on construction — idle showcase cards render one static poster frame and only animate while hovered (previously every card on screen ran a 60 FPS loop forever). `play()` cannot stack duplicate loops and `destroy()` hard-stops rendering.
 - **Missing Tailwind utilities added**: `animate-fade-in`, `animate-bounce-in`, `scrollbar-none` and the `h-18` navbar height are now actually defined, plus a `prefers-reduced-motion` fallback.
 - **Relative base path** (`base: './'`): the production build also works when served from a sub-path (static hosts, GitHub Pages, previews).
-- **Zero-config GitHub Pages & static root deployment (`bundle/app.js` + `bundle/app.css`)**: `index.html` and `404.html` ship with inline dark-theme fallback styles and reference pre-compiled `./bundle/app.css` and `./bundle/app.js` (plus `.nojekyll`). When GitHub Pages deploys directly from the repository root (`main` / `/`), the full application loads immediately instead of failing on uncompiled `/src/main.jsx` with a blank white screen. During `npm run dev` and `npm run build`, the Vite plugin in `vite.config.js` transparently switches to `/src/main.jsx` and refreshes `bundle/` on every build.
+- **Zero-config GitHub Pages & static root deployment (`bundle/app.js` + `bundle/app.css`)**: `index.html` and `404.html` ship with inline dark-theme fallback styles and reference pre-compiled `./bundle/app.css` and `./bundle/app.js` (plus `.nojekyll`). When GitHub Pages deploys directly from the repository root (`main` / `/`), the full application loads immediately instead of failing on uncompiled `/src/main.jsx` with a blank white screen. During `npm run dev` and `npm run build`, the Vite plugin in `vite.config.js` transparently switches to `/src/main.jsx` and refreshes `bundle/` on every build. `.github/workflows/ci-pages.yml` fails CI when `bundle/` drifts from `src/` and explicitly requests the Pages build on every push to `main`, so neither a stale bundle nor a skipped Pages build can silently ship a blank page (see **Deployment — GitHub Pages** below).
 
 ## 🛠️ Tech Stack
 
@@ -109,6 +109,51 @@ Visit `http://localhost:3000` in your browser.
 npm run build
 npm run preview
 ```
+
+---
+
+## 🌍 Deployment — GitHub Pages
+
+Live site: <https://pdeoitin-sketch.github.io/AI-Bhideo/>
+
+Pages is configured as **Settings → Pages → Build and deployment → Deploy from a branch → `main` / `/ (root)`**.
+That makes the *committed repository root* the website, so two rules apply:
+
+1. **`bundle/` is the deployed app.** `index.html` and `404.html` load
+   `./bundle/app.css` + `./bundle/app.js`, which are the compiled output of
+   `src/`. After editing anything under `src/`, run `npm run build` and commit
+   `bundle/app.js`, `bundle/app.css` and `404.html` in the same commit. Forgetting
+   this ships the old app (or, if `bundle/` is absent, a blank white page because
+   a static host cannot run `/src/main.jsx`).
+2. **Pages has to build after the push.** GitHub does not always run the Pages
+   build for a merge — the merge of PR #3 left the site serving the previous
+   commit, which is exactly what a "white screen after merging" looks like.
+   `.github/workflows/ci-pages.yml` therefore does two jobs:
+
+   | Job | Runs on | Purpose |
+   | --- | --- | --- |
+   | `verify-bundle` | every push & PR | `npm ci && npm run build`, then fails if `bundle/` or `404.html` differ from `src/` |
+   | `trigger-pages-build` | push to `main`, `workflow_dispatch` | `POST /repos/{owner}/{repo}/pages/builds` with `pages: write`, so the rebuild never depends on the implicit trigger |
+
+**If the site looks wrong after a merge**, in this order:
+
+```bash
+# 1. Which commit is actually deployed?
+gh api repos/pdeoitin-sketch/AI-Bhideo/pages/builds/latest --jq '.commit, .created_at'
+
+# 2. Is it the tip of main?
+gh api repos/pdeoitin-sketch/AI-Bhideo/commits/main --jq '.sha'
+
+# 3. If not, force a rebuild (needs pages: write) or open Actions → "CI & GitHub Pages deploy" → Run workflow
+gh api -X POST repos/pdeoitin-sketch/AI-Bhideo/pages/builds
+```
+
+Then hard-refresh (Ctrl/Cmd + Shift + R): Pages caches the old `index.html`
+briefly, and a cached 404 for `bundle/app.js` can outlive the fix by a minute.
+
+A missing or stale bundle is no longer silent either — `index.html` watches the
+`bundle/app.js` request and prints "Could not load bundle/app.js" with the fix
+instead of leaving the visitor on an unexplained splash screen.
 
 ---
 
