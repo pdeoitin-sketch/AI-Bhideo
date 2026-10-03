@@ -44,13 +44,31 @@
 - Seamless Sign In, Sign Up, and Forgot Password modal with social logins (Google, GitHub, Discord, Apple).
 - Active state management with localStorage persistence.
 
-### 6. 💳 Compute Pricing Plans
+### 6. 💳 Recharge & Subscription Modal
+- One-click GPU credit top-ups: **+500**, **+2,000**, and **+6,000** credit packs (one-off, never expire).
+- Live credit gauge showing `balance / allowance`.
+- Switch between every studio plan from one place; credits from the new plan are granted immediately.
+- Opens automatically when a generation is attempted without enough credits, so the flow never dead-ends.
+
+### 7. 💳 Compute Pricing Plans
 - **Free Explorer** ($0/mo - 50 credits)
 - **Creator Pro** ($29/mo - 1,000 credits, 1080p 60FPS, commercial license)
 - **Studio Pro** ($79/mo - 3,500 credits, native 4K 60FPS, API access, dedicated GPU queue)
 - **Enterprise Cluster** ($249/mo - Dedicated H100 cluster, custom LoRA fine-tuning)
 
 ---
+
+## 🛡️ Reliability & Error Handling
+
+The studio is defensive by design so that a single failure can never leave a blank page:
+
+- **`ErrorBoundary`** wraps the app shell, the routed views, the modal layer and the footer. Any render error shows a readable "Something went wrong" panel with *Try again* / *Reload app* actions and collapsible technical details, instead of unmounting the React root.
+- **Safe storage layer** (`src/utils/safeStorage.js`): every `localStorage` read/write is guarded, and persisted state is normalised on load. Corrupted JSON, blocked storage (private mode / sandboxed iframe) and user objects saved by older versions can no longer throw during the first render.
+- **Clipboard fallback**: `navigator.clipboard` is unavailable on insecure origins and in some embedded contexts, so copying a prompt/API key falls back to a hidden-textarea copy instead of throwing inside the click handler.
+- **Leak-proof timers**: the generation simulation and toast timers are tracked in refs and cleared on unmount.
+- **Canvas engine fixes**: `ProceduralVideoEngine` no longer auto-starts a `requestAnimationFrame` loop on construction — idle showcase cards render one static poster frame and only animate while hovered (previously every card on screen ran a 60 FPS loop forever). `play()` cannot stack duplicate loops and `destroy()` hard-stops rendering.
+- **Missing Tailwind utilities added**: `animate-fade-in`, `animate-bounce-in`, `scrollbar-none` and the `h-18` navbar height are now actually defined, plus a `prefers-reduced-motion` fallback.
+- **Relative base path** (`base: './'`): the production build also works when served from a sub-path (static hosts, GitHub Pages, previews).
 
 ## 🛠️ Tech Stack
 

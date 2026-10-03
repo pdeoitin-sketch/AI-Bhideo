@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 
 export const UserProfile = () => {
-  const { user, setUser, userCreations, setUserCreations, setCurrentView, showToast, setIsUpgradeModalOpen } = useApp();
+  const { user, setUser, userCreations, deleteCreation, setCurrentView, showToast, copyToClipboard, setIsUpgradeModalOpen } = useApp();
   const [activeTab, setActiveTab] = useState('creations'); // 'creations' | 'credits' | 'api' | 'settings'
   const [isEditingBio, setIsEditingBio] = useState(false);
   const [bioInput, setBioInput] = useState(user.bio);
@@ -37,7 +37,7 @@ export const UserProfile = () => {
   };
 
   const handleCopyKey = (keyObj) => {
-    navigator.clipboard.writeText(keyObj.key);
+    copyToClipboard(keyObj.key);
     setCopiedKeyId(keyObj.id);
     showToast('API Key Copied', 'Secret API key copied to clipboard.', 'success');
     setTimeout(() => setCopiedKeyId(null), 2000);
@@ -78,7 +78,7 @@ export const UserProfile = () => {
   };
 
   const handleDeleteCreation = (vidId) => {
-    setUserCreations(prev => prev.filter(v => v.id !== vidId));
+    deleteCreation(vidId);
     showToast('Video Deleted', 'Removed from your library.', 'info');
   };
 

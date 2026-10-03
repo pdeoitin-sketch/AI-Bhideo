@@ -3,7 +3,7 @@ import { useApp } from '../context/AppContext';
 import { CheckCircle2, AlertTriangle, AlertCircle, Info, X } from 'lucide-react';
 
 export const NotificationToast = () => {
-  const { toastMessage, showToast } = useApp();
+  const { toastMessage, clearToast } = useApp();
 
   if (!toastMessage) return null;
 
@@ -29,6 +29,13 @@ export const NotificationToast = () => {
           <h4 className="font-semibold text-sm">{toastMessage.title}</h4>
           <p className="text-xs text-slate-300 mt-0.5 leading-relaxed">{toastMessage.message}</p>
         </div>
+        <button
+          onClick={clearToast}
+          className="p-1 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
+          aria-label="Dismiss notification"
+        >
+          <X className="w-4 h-4" />
+        </button>
       </div>
     </div>
   );

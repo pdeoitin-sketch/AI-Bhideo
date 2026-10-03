@@ -3,14 +3,14 @@ import { useApp } from '../context/AppContext';
 import { X, Key, Copy, Check, Plus, Trash2, Code2, ExternalLink } from 'lucide-react';
 
 export const ApiKeysModal = () => {
-  const { isApiKeysModalOpen, setIsApiKeysModalOpen, user, setUser, showToast } = useApp();
+  const { isApiKeysModalOpen, setIsApiKeysModalOpen, user, setUser, showToast, copyToClipboard } = useApp();
   const [copiedKeyId, setCopiedKeyId] = useState(null);
   const [newKeyName, setNewKeyName] = useState('');
 
   if (!isApiKeysModalOpen) return null;
 
   const handleCopy = (k) => {
-    navigator.clipboard.writeText(k.key);
+    copyToClipboard(k.key);
     setCopiedKeyId(k.id);
     showToast('Copied API Key', 'Ready to use in requests.', 'success');
     setTimeout(() => setCopiedKeyId(null), 2000);

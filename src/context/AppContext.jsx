@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { 
   INITIAL_MODELS, 
   INITIAL_COMMUNITY_VIDEOS, 
@@ -6,29 +6,43 @@ import {
   PRICING_PLANS,
   INSPIRATION_PROMPTS 
 } from '../data/mockData';
+import { readJSON, writeJSON } from '../utils/safeStorage';
 
 const AppContext = createContext();
+
+// A user object persisted by an older version (or hand-edited in devtools) may
+// be missing nested fields such as `stats` or `apiKeys`. Merging over the
+// defaults keeps every screen safe from `cannot read property of undefined`.
+const normalizeUser = (saved) => {
+  if (!saved || typeof saved !== 'object') return MOCK_USER;
+  return {
+    ...MOCK_USER,
+    ...saved,
+    stats: { ...MOCK_USER.stats, ...(saved.stats || {}) },
+    apiKeys: Array.isArray(saved.apiKeys) ? saved.apiKeys : MOCK_USER.apiKeys,
+  };
+};
+
+const normalizeVideos = (saved, fallback) =>
+  Array.isArray(saved) ? saved.filter((v) => v && typeof v === 'object' && v.id) : fallback;
 
 export const AppProvider = ({ children }) => {
   // Navigation & Page routing
   const [currentView, setCurrentView] = useState('home'); // 'home' | 'studio' | 'showcase' | 'models' | 'profile' | 'pricing' | 'docs'
   
   // User Authentication State
-  const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem('bhideo_user');
-    return saved ? JSON.parse(saved) : MOCK_USER;
-  });
+  const [user, setUser] = useState(() => normalizeUser(readJSON('bhideo_user', MOCK_USER)));
   const [isAuthenticated, setIsAuthenticated] = useState(true);
 
   // Community Videos & User Creations
-  const [communityVideos, setCommunityVideos] = useState(() => {
-    const saved = localStorage.getItem('bhideo_community_videos');
-    return saved ? JSON.parse(saved) : INITIAL_COMMUNITY_VIDEOS;
-  });
+  const [communityVideos, setCommunityVideos] = useState(
+    () => normalizeVideos(readJSON('bhideo_community_videos', null), INITIAL_COMMUNITY_VIDEOS)
+  );
 
   const [userCreations, setUserCreations] = useState(() => {
-    const saved = localStorage.getItem('bhideo_user_creations');
-    return saved ? JSON.parse(saved) : [
+    const saved = normalizeVideos(readJSON('bhideo_user_creations', null), null);
+    if (saved) return saved;
+    return [
       {
         id: 'usr-vid-01',
         title: 'Cyberpunk Rain Hypercar Drift',
@@ -107,24 +121,40 @@ export const AppProvider = ({ children }) => {
 
   // Persist State
   useEffect(() => {
-    localStorage.setItem('bhideo_user', JSON.stringify(user));
+    writeJSON('bhideo_user', user);
   }, [user]);
 
   useEffect(() => {
-    localStorage.setItem('bhideo_user_creations', JSON.stringify(userCreations));
+    writeJSON('bhideo_user_creations', userCreations);
   }, [userCreations]);
 
   useEffect(() => {
-    localStorage.setItem('bhideo_community_videos', JSON.stringify(communityVideos));
+    writeJSON('bhideo_community_videos', communityVideos);
   }, [communityVideos]);
 
   // Show Toast Helper
+  const toastTimerRef = useRef(null);
   const showToast = (title, message, type = 'info') => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     setToastMessage({ title, message, type, id: Date.now() });
-    setTimeout(() => {
+    toastTimerRef.current = setTimeout(() => {
       setToastMessage(null);
+      toastTimerRef.current = null;
     }, 4000);
   };
+
+  const clearToast = () => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = null;
+    setToastMessage(null);
+  };
+
+  // Generation timer ref: the simulation must never outlive the provider.
+  const generationTimerRef = useRef(null);
+  useEffect(() => () => {
+    if (generationTimerRef.current) clearInterval(generationTimerRef.current);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+  }, []);
 
   // Generate Video Simulation Pipeline
   const startVideoGeneration = () => {
@@ -175,6 +205,7 @@ export const AppProvider = ({ children }) => {
     ];
 
     let currentStep = 0;
+    if (generationTimerRef.current) clearInterval(generationTimerRef.current);
     const interval = setInterval(() => {
       if (currentStep < stages.length) {
         setGenerationProgress(stages[currentStep].progress);
@@ -183,6 +214,7 @@ export const AppProvider = ({ children }) => {
         currentStep++;
       } else {
         clearInterval(interval);
+        generationTimerRef.current = null;
         setIsGenerating(false);
 
         const newVideo = {
@@ -223,6 +255,7 @@ export const AppProvider = ({ children }) => {
         setSeed(Math.floor(Math.random() * 1000000000));
       }
     }, 1100);
+    generationTimerRef.current = interval;
   };
 
   // Magic Prompt Enhancer with Cinema Terms
@@ -291,10 +324,66 @@ export const AppProvider = ({ children }) => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // Delete a creation from the personal library (and the community feed).
+  // Previously UserProfile called a `setUserCreations` that was never exposed
+  // by this provider, so pressing delete threw "setUserCreations is not a
+  // function" inside an event handler and React tore down the entire tree,
+  // leaving a blank page.
+  const deleteCreation = (videoId) => {
+    setUserCreations((prev) => prev.filter((v) => v.id !== videoId));
+    setCommunityVideos((prev) => prev.filter((v) => v.id !== videoId));
+    setActiveGeneratedVideo((prev) => (prev && prev.id === videoId ? null : prev));
+    setActiveLightboxVideo((prev) => (prev && prev.id === videoId ? null : prev));
+  };
+
+  // One-time credit packs (never expire).
+  const purchaseCredits = (amount) => {
+    setUser((prev) => ({
+      ...prev,
+      credits: prev.credits + amount,
+      maxCredits: Math.max(prev.maxCredits || 0, prev.credits + amount),
+    }));
+    setIsUpgradeModalOpen(false);
+    showToast('Credits Added! ⚡', `${amount} compute credits were added to your balance.`, 'success');
+  };
+
   // Copy Prompt to Clipboard
+  // `navigator.clipboard` is undefined on insecure origins and in some
+  // embedded/iframe contexts, so fall back to a hidden textarea instead of
+  // throwing inside the click handler.
+  const copyToClipboard = (text) => {
+    const value = String(text ?? '');
+    try {
+      if (navigator?.clipboard?.writeText) {
+        navigator.clipboard.writeText(value);
+        return true;
+      }
+    } catch {
+      /* fall through to the legacy path */
+    }
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = value;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   const copyPrompt = (text) => {
-    navigator.clipboard.writeText(text);
-    showToast('Copied to Clipboard!', 'Prompt copied. Ready to paste.', 'success');
+    const copied = copyToClipboard(text);
+    if (copied) {
+      showToast('Copied to Clipboard!', 'Prompt copied. Ready to paste.', 'success');
+    } else {
+      showToast('Copy Failed', 'Your browser blocked clipboard access.', 'warning');
+    }
   };
 
   // Auth Handlers
@@ -313,12 +402,19 @@ export const AppProvider = ({ children }) => {
     showToast('Signed Out', 'You have been signed out successfully.', 'info');
   };
 
+  const PLAN_CREDITS = { studio: 3500, creator: 1000, enterprise: 10000 };
+
   const upgradePlan = (plan) => {
-    setUser(prev => ({
-      ...prev,
-      tier: plan.name,
-      credits: prev.credits + (plan.id === 'studio' ? 3500 : plan.id === 'creator' ? 1000 : 500)
-    }));
+    const bonus = PLAN_CREDITS[plan?.id] ?? 500;
+    setUser(prev => {
+      const credits = prev.credits + bonus;
+      return {
+        ...prev,
+        tier: plan.name,
+        credits,
+        maxCredits: Math.max(prev.maxCredits || 0, credits),
+      };
+    });
     setIsUpgradeModalOpen(false);
     showToast('Plan Upgraded! 🚀', `You are now subscribed to ${plan.name}. Credits added.`, 'success');
   };
@@ -333,7 +429,11 @@ export const AppProvider = ({ children }) => {
         isAuthenticated,
         setIsAuthenticated,
         communityVideos,
+        setCommunityVideos,
         userCreations,
+        setUserCreations,
+        deleteCreation,
+        purchaseCredits,
         prompt,
         setPrompt,
         negativePrompt,
@@ -382,6 +482,7 @@ export const AppProvider = ({ children }) => {
         setIsUpgradeModalOpen,
         toastMessage,
         showToast,
+        clearToast,
         searchQuery,
         setSearchQuery,
         selectedCategory,

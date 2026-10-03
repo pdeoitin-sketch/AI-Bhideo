@@ -12,6 +12,8 @@ import { AiPromptAssistant } from './components/AiPromptAssistant';
 import { AuthModal } from './components/AuthModal';
 import { VideoLightboxModal } from './components/VideoLightboxModal';
 import { ApiKeysModal } from './components/ApiKeysModal';
+import { UpgradeModal } from './components/UpgradeModal';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { NotificationToast } from './components/NotificationToast';
 import { Footer } from './components/Footer';
 
@@ -44,6 +46,7 @@ function MainLayout() {
 
         {/* View Routing */}
         <main>
+          <ErrorBoundary key={currentView} title="This section failed to load">
           {currentView === 'home' && (
             <>
               <HeroSection onOpenStudio={scrollToStudio} />
@@ -86,19 +89,25 @@ function MainLayout() {
               <PricingSection />
             </div>
           )}
+          </ErrorBoundary>
         </main>
       </div>
 
       {/* Global Modals & Interactive Drawers */}
-      <VideoLightboxModal />
-      <AuthModal />
-      <AiPromptAssistant />
-      <ApiKeysModal />
+      <ErrorBoundary title="A modal failed to open">
+        <VideoLightboxModal />
+        <AuthModal />
+        <AiPromptAssistant />
+        <ApiKeysModal />
+        <UpgradeModal />
+      </ErrorBoundary>
       <NotificationToast />
 
       {/* Global Footer */}
       <div className="relative z-10">
-        <Footer />
+        <ErrorBoundary title="Footer failed to render">
+          <Footer />
+        </ErrorBoundary>
       </div>
 
     </div>
@@ -107,8 +116,10 @@ function MainLayout() {
 
 export default function App() {
   return (
-    <AppProvider>
-      <MainLayout />
-    </AppProvider>
+    <ErrorBoundary title="AI-Bhideo could not start">
+      <AppProvider>
+        <MainLayout />
+      </AppProvider>
+    </ErrorBoundary>
   );
 }

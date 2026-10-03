@@ -42,7 +42,13 @@ export default {
         display: ['Space Grotesk', 'Plus Jakarta Sans', 'sans-serif'],
         mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
       },
+      spacing: {
+        // Used by the navbar (h-18) — not part of Tailwind's default scale.
+        18: '4.5rem',
+      },
       animation: {
+        'fade-in': 'fadeIn 0.25s ease-out both',
+        'bounce-in': 'bounceIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both',
         'pulse-glow': 'pulseGlow 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'float': 'float 6s ease-in-out infinite',
         'spin-slow': 'spin 12s linear infinite',
@@ -51,6 +57,15 @@ export default {
         'scanline': 'scanline 8s linear infinite',
       },
       keyframes: {
+        fadeIn: {
+          '0%': { opacity: '0', transform: 'translateY(6px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        bounceIn: {
+          '0%': { opacity: '0', transform: 'scale(0.94) translateY(12px)' },
+          '60%': { opacity: '1', transform: 'scale(1.01) translateY(0)' },
+          '100%': { opacity: '1', transform: 'scale(1) translateY(0)' },
+        },
         pulseGlow: {
           '0%, 100%': { opacity: '0.4', transform: 'scale(1)' },
           '50%': { opacity: '0.8', transform: 'scale(1.05)' },
