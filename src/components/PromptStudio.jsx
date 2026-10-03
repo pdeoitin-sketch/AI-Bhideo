@@ -31,6 +31,12 @@ import {
   ASPECT_RATIOS 
 } from '../data/mockData';
 import { ProceduralVideoEngine } from '../utils/proceduralVideoGenerator';
+import {
+  downloadVideoAsset,
+  getCanvasDimensions,
+  inferPromptTheme,
+  recordCanvasVideo,
+} from '../utils/videoRecorder';
 
 export const PromptStudio = () => {
   const {
@@ -61,6 +67,7 @@ export const PromptStudio = () => {
     generationStage,
     generationEta,
     activeGeneratedVideo,
+    videoAssets,
     startVideoGeneration,
     enhancePrompt,
     setRandomInspiration,
@@ -78,45 +85,58 @@ export const PromptStudio = () => {
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [isCopied, setIsCopied] = useState(false);
   const [currentVideoTime, setCurrentVideoTime] = useState(0);
+  const [isExporting, setIsExporting] = useState(false);
 
   const canvasRef = useRef(null);
+  const outputVideoRef = useRef(null);
   const noiseCanvasRef = useRef(null);
   const engineRef = useRef(null);
   const noiseEngineRef = useRef(null);
 
-  // Active theme for preview canvas
-  const activeTheme = activeGeneratedVideo ? activeGeneratedVideo.theme : 
-    prompt.toLowerCase().includes('space') ? 'space' :
-    prompt.toLowerCase().includes('temple') ? 'temple' :
-    prompt.toLowerCase().includes('anime') ? 'anime' :
-    prompt.toLowerCase().includes('fluid') ? 'fluid' : 'cyberpunk';
+  const activeVideoAsset = activeGeneratedVideo ? videoAssets[activeGeneratedVideo.id] : null;
+  const previewPrompt = prompt;
+  const activeTheme = inferPromptTheme(prompt);
 
-  // Initialize main preview video engine
+  // Initialize the prompt-aware canvas preview. Once a recording exists, play
+  // the actual encoded video file instead of leaving the user on a live canvas.
   useEffect(() => {
     if (canvasRef.current) {
-      if (engineRef.current) {
-        engineRef.current.destroy();
-      }
+      if (engineRef.current) engineRef.current.destroy();
 
       const canvas = canvasRef.current;
-      canvas.width = 1280;
-      canvas.height = 720;
+      const dimensions = getCanvasDimensions(selectedAspectRatio);
+      canvas.width = dimensions.width;
+      canvas.height = dimensions.height;
 
       const engine = new ProceduralVideoEngine(canvas, activeTheme, {
+        prompt: previewPrompt,
         fps: selectedFps,
-        duration: parseInt(selectedDuration) || 8,
-        motionStrength: motionStrength,
-        cameraPreset: cameraPreset
+        duration: parseInt(selectedDuration, 10) || 8,
+        motionStrength,
+        cameraPreset,
       });
 
       engine.play();
       engineRef.current = engine;
+      if (!activeVideoAsset?.url) setIsPlaying(true);
     }
 
     return () => {
-      if (engineRef.current) engineRef.current.destroy();
+      if (engineRef.current) {
+        engineRef.current.destroy();
+        engineRef.current = null;
+      }
     };
-  }, [activeTheme, selectedFps, selectedDuration, motionStrength, cameraPreset, activeGeneratedVideo]);
+  }, [
+    activeTheme,
+    activeVideoAsset?.url,
+    cameraPreset,
+    motionStrength,
+    previewPrompt,
+    selectedAspectRatio,
+    selectedDuration,
+    selectedFps,
+  ]);
 
   // Handle Latent Noise Canvas during generation
   useEffect(() => {
@@ -158,6 +178,19 @@ export const PromptStudio = () => {
   }, [isGenerating, generationProgress]);
 
   const togglePlayPause = () => {
+    const outputVideo = outputVideoRef.current;
+    if (outputVideo) {
+      if (isPlaying) {
+        outputVideo.pause();
+        setIsPlaying(false);
+      } else {
+        outputVideo.play().then(() => setIsPlaying(true)).catch(() => {
+          showToast('Playback Blocked', 'Use the video controls to start playback in your browser.', 'warning');
+        });
+      }
+      return;
+    }
+
     if (!engineRef.current) return;
     if (isPlaying) {
       engineRef.current.pause();
@@ -166,6 +199,15 @@ export const PromptStudio = () => {
       engineRef.current.play();
       setIsPlaying(true);
     }
+  };
+
+  const restartPlayback = () => {
+    if (outputVideoRef.current) {
+      outputVideoRef.current.currentTime = 0;
+      outputVideoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+      return;
+    }
+    engineRef.current?.seek(0);
   };
 
   const handleApplyStylePreset = (preset) => {
@@ -192,30 +234,48 @@ export const PromptStudio = () => {
     setTimeout(() => setIsCopied(false), 2000);
   };
 
-  const handleDownloadVideo = () => {
-    showToast('Preparing 4K MP4 Download', 'Encoding video master container with H.265 codec...', 'info');
-    setTimeout(() => {
-      const link = document.createElement('a');
-      link.download = `AI-Bhideo-${selectedModel.id}-${Date.now()}.webm`;
-      link.href = canvasRef.current ? canvasRef.current.toDataURL() : '#';
-      // Fallback
-      showToast('Download Ready!', 'Your 4K AI video has been rendered and downloaded.', 'success');
-    }, 1200);
+  const handleGenerateVideo = () => startVideoGeneration(({ durationSeconds, fps, onProgress }) => {
+    if (!canvasRef.current) {
+      throw new Error('The preview canvas is not ready. Please wait a moment and retry.');
+    }
+    return recordCanvasVideo(canvasRef.current, { durationSeconds, fps, onProgress });
+  });
+
+  const handleDownloadVideo = async () => {
+    if (isGenerating || isExporting) return;
+    setIsExporting(true);
+    try {
+      if (activeVideoAsset?.url) {
+        const filename = downloadVideoAsset(activeVideoAsset, activeGeneratedVideo?.title);
+        if (!filename) throw new Error('The browser could not start the video download.');
+        showToast('Download Started', `Saving ${filename}`, 'success');
+        return;
+      }
+
+      if (!canvasRef.current) throw new Error('The video preview is not ready yet.');
+      const durationSeconds = parseInt(selectedDuration, 10) || 8;
+      showToast('Recording Video', `Capturing a ${durationSeconds}-second ${selectedAspectRatio} preview...`, 'info');
+      const output = await recordCanvasVideo(canvasRef.current, {
+        durationSeconds,
+        fps: selectedFps,
+      });
+      const filename = downloadVideoAsset(output, activeGeneratedVideo?.title || `AI-Bhideo-${selectedModel.id}`);
+      if (!filename) throw new Error('The browser could not start the video download.');
+      showToast('Video Download Ready', `Saved ${filename}`, 'success');
+    } catch (error) {
+      showToast('Video Export Failed', error instanceof Error ? error.message : 'The video could not be exported.', 'error');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const handleUpscaleTo4K = () => {
-    showToast('Neural 4K Upscaler', 'Upscaling video frames with Real-ESRGAN Temporal DiT at 60FPS...', 'info');
-    setTimeout(() => {
-      showToast('Upscale Complete!', '4K HDR Master version ready.', 'success');
-    }, 1800);
+    showToast('Upscaling Unavailable', 'No server-side AI upscaler is connected. The downloaded clip uses the selected canvas resolution.', 'info');
   };
 
   const handleExtendVideo = () => {
-    showToast('Temporal Extender', 'Predicting next 4 seconds using causal flow matching...', 'info');
-    setTimeout(() => {
-      setSelectedDuration('16s');
-      showToast('Video Extended!', 'Duration extended to 16s with seamless motion continuity.', 'success');
-    }, 1500);
+    setSelectedDuration('16s');
+    showToast('Duration Updated', 'The next render will record a 16-second clip. Generate again to create it.', 'info');
   };
 
   return (
@@ -230,14 +290,14 @@ export const PromptStudio = () => {
                 <Sparkles className="w-4 h-4 text-brand-400" />
               </span>
               <span className="text-xs font-mono font-semibold text-brand-400 uppercase tracking-widest">
-                Neural Generation Studio
+                Browser Video Studio
               </span>
             </div>
             <h2 className="text-2xl sm:text-4xl font-display font-extrabold text-white">
-              AI Video Synthesis Suite
+              Video Render Studio
             </h2>
             <p className="text-sm text-slate-400 mt-1 max-w-xl">
-              Type your vision, select camera trajectories, choose a diffusion model, and render cinematic video in seconds.
+              Describe your scene, pick a render profile, and export a real playable clip. This static demo renders locally in your browser; it is not connected to a hosted AI model.
             </p>
           </div>
 
@@ -303,7 +363,7 @@ export const PromptStudio = () => {
                 <textarea
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
-                  placeholder="Describe your scene in detail (e.g. A cybernetic tiger prowling rain-slicked Tokyo streets, volumetric neon reflections, 35mm anamorphic lens, 8k resolution...)"
+                  placeholder="Describe a scene (e.g. a chrome hypercar in neon rain, a starship near a violet nebula, or a glowing jellyfish in a deep ocean...)"
                   rows={4}
                   className="w-full bg-dark-900/90 border border-white/10 rounded-2xl p-4 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brand-500/60 focus:ring-1 focus:ring-brand-500/50 resize-y transition-all leading-relaxed"
                 />
@@ -367,9 +427,9 @@ export const PromptStudio = () => {
               <div className="flex items-center justify-between mb-4">
                 <label className="text-xs font-semibold text-slate-300 flex items-center gap-2">
                   <Cpu className="w-4 h-4 text-purple-400" />
-                  <span>Select AI Diffusion Transformer Model</span>
+                  <span>Select Render Profile</span>
                 </label>
-                <span className="text-[11px] text-slate-400">4 Architecture Options</span>
+                <span className="text-[11px] text-slate-400">4 Style Profiles</span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -580,7 +640,7 @@ export const PromptStudio = () => {
             <div>
               <button
                 disabled={isGenerating}
-                onClick={startVideoGeneration}
+                onClick={handleGenerateVideo}
                 className={`w-full py-4 px-6 rounded-2xl font-bold text-base shadow-2xl transition-all flex items-center justify-center gap-3 relative overflow-hidden group ${
                   isGenerating
                     ? 'bg-dark-800 text-slate-400 cursor-not-allowed border border-white/10'
@@ -590,12 +650,12 @@ export const PromptStudio = () => {
                 {isGenerating ? (
                   <>
                     <RefreshCw className="w-5 h-5 text-brand-400 animate-spin" />
-                    <span>Synthesizing Video... {generationProgress}%</span>
+                    <span>Recording Video... {generationProgress}%</span>
                   </>
                 ) : (
                   <>
                     <Sparkles className="w-5 h-5 text-white group-hover:rotate-12 transition-transform" />
-                    <span>Generate AI Video ({selectedModel.name})</span>
+                    <span>Render Video Clip ({selectedModel.name})</span>
                     <span className="px-2 py-0.5 rounded-lg bg-black/30 border border-white/20 text-xs text-amber-300 font-mono">
                       ⚡ {selectedModel.creditCost} Credits
                     </span>
@@ -606,7 +666,7 @@ export const PromptStudio = () => {
 
           </div>
 
-          {/* RIGHT COLUMN: Live Video Player & Diffusion Pipeline Telemetry (5 Cols) */}
+            {/* RIGHT COLUMN: Video Player & Render Progress (5 Cols) */}
           <div className="lg:col-span-5 space-y-6">
             
             {/* Master Video Display Canvas / Player */}
@@ -615,9 +675,9 @@ export const PromptStudio = () => {
               <div className="flex items-center justify-between mb-3 px-1">
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-xs font-semibold text-white">Neural Output Master</span>
+                  <span className="text-xs font-semibold text-white">Video Output</span>
                   <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-brand-500/20 text-brand-300">
-                    {selectedModel.badge}
+                    {activeVideoAsset ? `${activeVideoAsset.extension.toUpperCase()} READY` : 'LIVE PREVIEW'}
                   </span>
                 </div>
 
@@ -657,13 +717,31 @@ export const PromptStudio = () => {
                 </div>
               </div>
 
-              {/* Video Canvas Container with dynamic aspect ratio */}
-              <div className="relative w-full rounded-2xl overflow-hidden bg-black aspect-video flex items-center justify-center border border-white/10">
-                
-                {/* Real-time Procedural Neural Video Canvas */}
+              {/* Video player uses the selected aspect ratio for both preview and export. */}
+              <div
+                className="relative w-full rounded-2xl overflow-hidden bg-black flex items-center justify-center border border-white/10"
+                style={{ aspectRatio: selectedAspectRatio.replace(':', ' / '), maxHeight: '70vh' }}
+              >
+                {activeVideoAsset?.url && (
+                  <video
+                    ref={outputVideoRef}
+                    src={activeVideoAsset.url}
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    preload="auto"
+                    onPlay={() => setIsPlaying(true)}
+                    onPause={() => setIsPlaying(false)}
+                    className="absolute inset-0 w-full h-full object-contain"
+                  />
+                )}
                 <canvas
                   ref={canvasRef}
-                  className="w-full h-full object-cover transition-opacity duration-500"
+                  aria-hidden={Boolean(activeVideoAsset?.url)}
+                  className={activeVideoAsset?.url
+                    ? 'absolute inset-0 w-full h-full opacity-0 pointer-events-none'
+                    : 'w-full h-full object-contain transition-opacity duration-500'}
                 />
 
                 {/* Overlaid Live Generation Diffusion Tensor when generating */}
@@ -674,13 +752,13 @@ export const PromptStudio = () => {
                     <div className="relative w-48 h-28 rounded-xl overflow-hidden border border-brand-500/50 shadow-lg shadow-brand-500/20 mb-4">
                       <canvas ref={noiseCanvasRef} className="w-full h-full object-cover" />
                       <div className="absolute inset-0 bg-gradient-to-t from-dark-950/80 via-transparent to-transparent flex items-end justify-center pb-1">
-                        <span className="text-[10px] font-mono text-brand-300">Latent Denoising Step</span>
+                        <span className="text-[10px] font-mono text-brand-300">Browser Video Capture</span>
                       </div>
                     </div>
 
                     <div className="w-full max-w-xs space-y-2">
                       <div className="flex justify-between text-xs font-semibold text-slate-200">
-                        <span>Diffusion Progress</span>
+                        <span>Video Render Progress</span>
                         <span className="text-brand-400 font-mono">{generationProgress}%</span>
                       </div>
                       
@@ -699,7 +777,7 @@ export const PromptStudio = () => {
                       <div className="flex items-center justify-center gap-3 text-[10px] text-slate-500 font-mono pt-1">
                         <span>ETA: ~{generationEta}s</span>
                         <span>•</span>
-                        <span>GPU: NVIDIA H100 SXM5</span>
+                        <span>Renderer: This Browser</span>
                       </div>
                     </div>
                   </div>
@@ -720,7 +798,7 @@ export const PromptStudio = () => {
                 {/* Overlay Metadata Tag */}
                 <div className="absolute bottom-2 left-2 z-10 pointer-events-none">
                   <span className="px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-md text-[10px] font-mono text-slate-300 border border-white/10">
-                    {selectedModel.resolution.split(' ')[0]} • {selectedFps}FPS • {selectedDuration}
+                    {activeGeneratedVideo?.resolution?.split(' ')[0] || 'Preview'} • {activeGeneratedVideo?.fps || selectedFps}FPS • {activeGeneratedVideo?.duration || selectedDuration}
                   </span>
                 </div>
               </div>
@@ -735,9 +813,7 @@ export const PromptStudio = () => {
                     {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                   </button>
                   <button
-                    onClick={() => {
-                      if (engineRef.current) engineRef.current.seek(0);
-                    }}
+                    onClick={restartPlayback}
                     className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-200 hover:text-white transition-colors"
                     title="Restart"
                   >
@@ -764,8 +840,9 @@ export const PromptStudio = () => {
 
                   <button
                     onClick={handleDownloadVideo}
-                    className="p-2 rounded-xl bg-brand-500 hover:bg-brand-400 text-white font-medium text-xs shadow-md shadow-brand-500/30 transition-all flex items-center gap-1"
-                    title="Download 4K Video Master"
+                    disabled={isGenerating || isExporting}
+                    className="p-2 rounded-xl bg-brand-500 hover:bg-brand-400 disabled:opacity-60 text-white font-medium text-xs shadow-md shadow-brand-500/30 transition-all flex items-center gap-1"
+                    title={isExporting ? 'Preparing video download' : 'Download a WebM or MP4 video file'}
                   >
                     <Download className="w-4 h-4" />
                   </button>
@@ -777,7 +854,7 @@ export const PromptStudio = () => {
             {/* Generation Metadata Telemetry Card */}
             <div className="glass-panel p-4 rounded-3xl border border-white/10 text-xs space-y-3">
               <div className="flex items-center justify-between text-slate-300 font-semibold border-b border-white/10 pb-2">
-                <span>Model Pipeline Telemetry</span>
+                <span>Video Render Details</span>
                 <span className="text-[10px] text-emerald-400 font-mono">Status: Ready</span>
               </div>
 

@@ -21,13 +21,13 @@ export const PricingSection = () => {
       <div className="text-center max-w-3xl mx-auto mb-10">
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/30 text-brand-300 text-xs font-mono font-bold mb-4">
           <Zap className="w-3.5 h-3.5" />
-          <span>FLEXIBLE COMPUTE TIERS</span>
+          <span>DEMO PRICING & CREDITS</span>
         </div>
         <h2 className="text-3xl sm:text-5xl font-display font-extrabold text-white tracking-tight">
-          Simple, Transparent <span className="gradient-text-neon">GPU Compute</span>
+          Lower-cost <span className="gradient-text-neon">Render Plans</span>
         </h2>
         <p className="mt-4 text-slate-300 text-sm sm:text-base">
-          Choose the speed, resolution, and credit allocation suited for your creative workflow.
+          Reduced monthly and annual demo prices. Plan changes update local credits only; no payment or hosted video compute is processed.
         </p>
 
         {/* Billing Switch */}
@@ -133,8 +133,8 @@ export const PricingSection = () => {
             <ShieldCheck className="w-5 h-5" />
           </div>
           <div>
-            <h4 className="text-sm font-bold text-white">100% Commercial Rights Included</h4>
-            <p className="text-xs text-slate-400">All generated videos on Creator, Studio, and Enterprise tiers are yours for commercial broadcast.</p>
+            <h4 className="text-sm font-bold text-white">Demo Checkout Only</h4>
+            <p className="text-xs text-slate-400">Plans and credit packs are illustrative. No payment is taken and no hosted AI model or GPU service is provisioned.</p>
           </div>
         </div>
         <button

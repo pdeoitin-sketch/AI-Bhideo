@@ -21,6 +21,7 @@ import {
   FastForward
 } from 'lucide-react';
 import { ProceduralVideoEngine } from '../utils/proceduralVideoGenerator';
+import { downloadVideoAsset, getCanvasDimensions, recordCanvasVideo } from '../utils/videoRecorder';
 
 export const VideoLightboxModal = () => {
   const { 
@@ -29,27 +30,42 @@ export const VideoLightboxModal = () => {
     remixPrompt, 
     copyPrompt, 
     toggleLikeVideo, 
-    showToast 
+    showToast,
+    videoAssets,
   } = useApp();
 
   const [isPlaying, setIsPlaying] = useState(true);
   const [isCopied, setIsCopied] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const canvasRef = useRef(null);
+  const videoRef = useRef(null);
   const engineRef = useRef(null);
 
   const video = activeLightboxVideo;
+  const videoAsset = video ? videoAssets?.[video.id] : null;
 
   useEffect(() => {
+    if (videoAsset?.url) {
+      if (engineRef.current) {
+        engineRef.current.destroy();
+        engineRef.current = null;
+      }
+      setIsPlaying(true);
+      return undefined;
+    }
+
     if (video && canvasRef.current) {
       const canvas = canvasRef.current;
-      canvas.width = 1280;
-      canvas.height = 720;
+      const dimensions = getCanvasDimensions(video.aspectRatio || '16:9');
+      canvas.width = dimensions.width;
+      canvas.height = dimensions.height;
 
-      const engine = new ProceduralVideoEngine(canvas, video.theme || 'cyberpunk', {
+      const engine = new ProceduralVideoEngine(canvas, video.theme || 'generic', {
+        prompt: video.prompt,
         fps: video.fps || 60,
-        duration: parseInt(video.duration) || 8,
+        duration: parseInt(video.duration, 10) || 8,
         motionStrength: video.motionScore || 7.5,
-        cameraPreset: video.camera || 'static'
+        cameraPreset: video.camera || 'static',
       });
 
       engine.play();
@@ -58,13 +74,28 @@ export const VideoLightboxModal = () => {
     }
 
     return () => {
-      if (engineRef.current) engineRef.current.destroy();
+      if (engineRef.current) {
+        engineRef.current.destroy();
+        engineRef.current = null;
+      }
     };
-  }, [video]);
+  }, [video, videoAsset?.url]);
 
   if (!video) return null;
 
   const togglePlayPause = () => {
+    if (videoRef.current) {
+      if (isPlaying) {
+        videoRef.current.pause();
+        setIsPlaying(false);
+      } else {
+        videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {
+          showToast('Playback Blocked', 'Use the video controls to start playback in your browser.', 'warning');
+        });
+      }
+      return;
+    }
+
     if (!engineRef.current) return;
     if (isPlaying) {
       engineRef.current.pause();
@@ -73,6 +104,15 @@ export const VideoLightboxModal = () => {
       engineRef.current.play();
       setIsPlaying(true);
     }
+  };
+
+  const restartPlayback = () => {
+    if (videoRef.current) {
+      videoRef.current.currentTime = 0;
+      videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+      return;
+    }
+    engineRef.current?.seek(0);
   };
 
   const handleCopy = () => {
@@ -86,11 +126,31 @@ export const VideoLightboxModal = () => {
     setActiveLightboxVideo(null);
   };
 
-  const handleDownload = () => {
-    showToast('Exporting 4K Video', 'Packaging MP4 stream at 60FPS...', 'info');
-    setTimeout(() => {
-      showToast('Download Ready!', `Saved "${video.title}.webm" to downloads.`, 'success');
-    }, 1200);
+  const handleDownload = async () => {
+    if (isExporting) return;
+    setIsExporting(true);
+    try {
+      if (videoAsset?.url) {
+        const filename = downloadVideoAsset(videoAsset, video.title);
+        if (!filename) throw new Error('The browser could not start the video download.');
+        showToast('Download Started', `Saving ${filename}`, 'success');
+        return;
+      }
+
+      if (!canvasRef.current) throw new Error('The video preview is not ready yet.');
+      showToast('Recording Video', `Capturing a ${parseInt(video.duration, 10) || 8}-second preview...`, 'info');
+      const output = await recordCanvasVideo(canvasRef.current, {
+        durationSeconds: parseInt(video.duration, 10) || 8,
+        fps: Number(video.fps) || 24,
+      });
+      const filename = downloadVideoAsset(output, video.title);
+      if (!filename) throw new Error('The browser could not start the video download.');
+      showToast('Video Download Ready', `Saved ${filename}`, 'success');
+    } catch (error) {
+      showToast('Video Export Failed', error instanceof Error ? error.message : 'The video could not be exported.', 'error');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
@@ -111,7 +171,22 @@ export const VideoLightboxModal = () => {
         <div className="lg:w-7/12 p-4 sm:p-6 flex flex-col justify-between bg-dark-950/60 border-b lg:border-b-0 lg:border-r border-white/10">
           
           <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black border border-white/10 flex items-center justify-center group">
-            <canvas ref={canvasRef} className="w-full h-full object-cover" />
+            {videoAsset?.url ? (
+              <video
+                ref={videoRef}
+                src={videoAsset.url}
+                autoPlay
+                loop
+                muted
+                playsInline
+                preload="auto"
+                onPlay={() => setIsPlaying(true)}
+                onPause={() => setIsPlaying(false)}
+                className="w-full h-full object-contain"
+              />
+            ) : (
+              <canvas ref={canvasRef} className="w-full h-full object-contain" />
+            )}
 
             {/* Click to play/pause overlay */}
             <button
@@ -141,7 +216,7 @@ export const VideoLightboxModal = () => {
                 {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
               </button>
               <button
-                onClick={() => engineRef.current?.seek(0)}
+                onClick={restartPlayback}
                 className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-200 hover:text-white transition-colors"
                 title="Restart"
               >
@@ -152,10 +227,11 @@ export const VideoLightboxModal = () => {
             <div className="flex items-center gap-2">
               <button
                 onClick={handleDownload}
-                className="px-3.5 py-2 rounded-xl bg-brand-500 hover:bg-brand-400 text-white text-xs font-semibold flex items-center gap-1.5 shadow-md shadow-brand-500/20"
+                disabled={isExporting}
+                className="px-3.5 py-2 rounded-xl bg-brand-500 hover:bg-brand-400 disabled:opacity-60 text-white text-xs font-semibold flex items-center gap-1.5 shadow-md shadow-brand-500/20"
               >
                 <Download className="w-4 h-4" />
-                <span>Download MP4</span>
+                <span>{isExporting ? 'Preparing…' : `Download ${videoAsset?.extension?.toUpperCase() || 'Video'}`}</span>
               </button>
             </div>
           </div>
