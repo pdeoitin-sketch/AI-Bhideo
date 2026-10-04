@@ -1,136 +1,196 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { X, Key, Copy, Check, Plus, Trash2, Code2, ExternalLink } from 'lucide-react';
+import { X, Key, Copy, Check, Plus, Trash2, Code2 } from 'lucide-react';
 
 export const ApiKeysModal = () => {
-  const { isApiKeysModalOpen, setIsApiKeysModalOpen, user, setUser, showToast, copyToClipboard } = useApp();
+  const {
+    isApiKeysModalOpen,
+    setIsApiKeysModalOpen,
+    user,
+    createApiKey,
+    revokeApiKey,
+    showToast,
+    copyToClipboard,
+  } = useApp();
   const [copiedKeyId, setCopiedKeyId] = useState(null);
   const [newKeyName, setNewKeyName] = useState('');
+  const apiKeys = Array.isArray(user?.apiKeys) ? user.apiKeys : [];
+  const snippetKey = apiKeys[0]?.key || 'bh_live_...';
+
+  useEffect(() => {
+    if (!isApiKeysModalOpen) return undefined;
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        setNewKeyName('');
+        setIsApiKeysModalOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [isApiKeysModalOpen, setIsApiKeysModalOpen]);
 
   if (!isApiKeysModalOpen) return null;
 
-  const handleCopy = (k) => {
-    copyToClipboard(k.key);
-    setCopiedKeyId(k.id);
+  const handleCopy = (keyRecord) => {
+    const copied = copyToClipboard(keyRecord.key);
+    if (!copied) {
+      showToast('Copy Failed', 'Your browser blocked clipboard access.', 'warning');
+      return;
+    }
+    setCopiedKeyId(keyRecord.id);
     showToast('Copied API Key', 'Ready to use in requests.', 'success');
     setTimeout(() => setCopiedKeyId(null), 2000);
   };
 
-  const handleCreate = () => {
-    if (!newKeyName.trim()) {
+  const handleCreate = (event) => {
+    event.preventDefault();
+    const apiKey = createApiKey(newKeyName);
+    if (!apiKey) {
       showToast('Key Name Required', 'Please enter a name for the API key.', 'warning');
       return;
     }
 
-    const randomSuffix = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-    const newKey = {
-      id: `key_${Date.now()}`,
-      name: newKeyName.trim(),
-      key: `bh_live_${randomSuffix}`,
-      created: new Date().toISOString().split('T')[0],
-      lastUsed: 'Never',
-      callsCount: 0
-    };
-
-    setUser(prev => ({
-      ...prev,
-      apiKeys: [newKey, ...(prev.apiKeys || [])]
-    }));
-
     setNewKeyName('');
-    showToast('Key Created', `New key "${newKey.name}" is active.`, 'success');
+    showToast('Key Created', `New key "${apiKey.name}" is active.`, 'success');
   };
 
-  const handleDelete = (id) => {
-    setUser(prev => ({
-      ...prev,
-      apiKeys: (prev.apiKeys || []).filter(k => k.id !== id)
-    }));
-    showToast('Key Deleted', 'API key has been revoked.', 'info');
+  const handleRevoke = (keyId) => {
+    const keyExists = apiKeys.some((keyRecord) => keyRecord.id === keyId);
+    if (!keyExists) return;
+
+    revokeApiKey(keyId);
+    setCopiedKeyId((currentId) => currentId === keyId ? null : currentId);
+    showToast('Key Revoked', 'The key was removed from your active keys.', 'info');
+  };
+
+  const closeModal = () => {
+    setNewKeyName('');
+    setIsApiKeysModalOpen(false);
   };
 
   return (
-    <div className="fixed inset-0 bright-modal-overlay z-50 flex items-center justify-center p-4">
-      <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-white/10 max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-fade-in space-y-6 shadow-2xl">
-        
+    <div
+      className="fixed inset-0 bright-modal-overlay z-50 flex items-center justify-center p-4"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) closeModal();
+      }}
+    >
+      <div
+        className="glass-panel p-6 sm:p-8 rounded-3xl border border-white/10 max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-fade-in space-y-6 shadow-2xl"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="api-keys-modal-title"
+      >
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-white/10">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-2xl bg-brand-500/10 text-brand-500 flex items-center justify-center">
               <Key className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-white">Developer API Keys & SDK</h3>
-              <p className="text-xs text-slate-400">Generate high-throughput programmatic video synthesis keys</p>
+              <h3 id="api-keys-modal-title" className="text-lg font-bold text-white">Developer API Keys & SDK</h3>
+              <p className="text-xs text-slate-400">Create and manage keys for the local preview.</p>
             </div>
           </div>
           <button
-            onClick={() => setIsApiKeysModalOpen(false)}
-            className="p-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white"
+            type="button"
+            onClick={closeModal}
+            className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-500 hover:text-slate-800 transition-colors"
+            aria-label="Close developer API keys"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Create new key box */}
-        <div className="p-4 rounded-2xl bg-dark-900 border border-white/10 space-y-3">
-          <label className="text-xs font-semibold text-slate-200">Create New Secret Key</label>
-          <div className="flex gap-2">
+        {/* Create new key */}
+        <form onSubmit={handleCreate} className="p-4 rounded-2xl bg-dark-900 border border-white/10 space-y-3">
+          <label htmlFor="api-key-name" className="text-sm font-semibold text-slate-200">Create a new key</label>
+          <div className="flex flex-col sm:flex-row gap-2">
             <input
+              id="api-key-name"
               type="text"
               value={newKeyName}
-              onChange={(e) => setNewKeyName(e.target.value)}
-              placeholder="e.g. Production Video Microservice"
-              className="flex-1 bg-dark-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white"
+              onChange={(event) => setNewKeyName(event.target.value)}
+              placeholder="e.g. Production video service"
+              className="flex-1 min-w-0 bg-dark-950 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-slate-900 placeholder-slate-500"
+              autoComplete="off"
             />
+            {newKeyName && (
+              <button
+                type="button"
+                onClick={() => setNewKeyName('')}
+                className="px-4 py-2 rounded-xl border border-slate-300 bg-white text-slate-700 text-sm font-semibold hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+            )}
             <button
-              onClick={handleCreate}
-              className="px-4 py-2 rounded-xl bg-brand-500 hover:bg-brand-400 text-white text-xs font-semibold shadow-md shadow-brand-500/20"
+              type="submit"
+              className="modal-primary-action px-4 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold shadow-md shadow-brand-500/20 flex items-center justify-center gap-1.5"
             >
-              Generate
+              <Plus className="w-4 h-4" />
+              Generate key
             </button>
           </div>
-        </div>
+          <p className="text-xs text-slate-500">Demo keys are saved in this browser and do not authenticate with a live API.</p>
+        </form>
 
-        {/* Existing Keys */}
-        <div className="space-y-3">
-          <h4 className="text-xs font-semibold text-slate-400">Active API Keys</h4>
-          {(user.apiKeys || []).map(k => (
-            <div key={k.id} className="p-4 rounded-2xl bg-dark-900 border border-white/5 flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold text-white">{k.name}</p>
-                <p className="text-xs font-mono text-slate-400 mt-0.5">{k.key.slice(0, 14)}••••••••••••••••</p>
-                <p className="text-[10px] text-slate-500 mt-1">Created: {k.created} • Usage: {k.callsCount} calls</p>
-              </div>
+        {/* Existing keys update immediately after revoke; no page reload needed. */}
+        <section className="space-y-3" aria-labelledby="active-api-keys-title" aria-live="polite" aria-relevant="additions removals">
+          <h4 id="active-api-keys-title" className="text-sm font-semibold text-slate-700">Active API keys <span className="text-slate-500">({apiKeys.length})</span></h4>
+          {apiKeys.length > 0 ? (
+            <div className="space-y-3">
+              {apiKeys.map((keyRecord) => (
+                <div key={keyRecord.id} className="p-4 rounded-2xl bg-dark-900 border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-white truncate">{keyRecord.name}</p>
+                    <p className="text-xs font-mono text-slate-400 mt-1 break-all">
+                      {String(keyRecord.key || '').slice(0, 14)}••••••••••••••••
+                    </p>
+                    <p className="text-xs text-slate-500 mt-1">Created {keyRecord.created || 'Unknown'} · {keyRecord.callsCount || 0} calls</p>
+                  </div>
 
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handleCopy(k)}
-                  className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs font-medium text-slate-200 flex items-center gap-1.5 transition-colors"
-                >
-                  {copiedKeyId === k.id ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                  <span>{copiedKeyId === k.id ? 'Copied' : 'Copy'}</span>
-                </button>
-                <button
-                  onClick={() => handleDelete(k.id)}
-                  className="p-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-xs transition-colors"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
+                  <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleCopy(keyRecord)}
+                      className="px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-sm font-medium text-slate-700 flex items-center gap-1.5 transition-colors"
+                    >
+                      {copiedKeyId === keyRecord.id ? <Check className="w-4 h-4 text-emerald-700" /> : <Copy className="w-4 h-4" />}
+                      <span>{copiedKeyId === keyRecord.id ? 'Copied' : 'Copy'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleRevoke(keyRecord.id)}
+                      className="px-3 py-2 rounded-lg bg-rose-50 hover:bg-rose-100 text-sm font-semibold text-rose-800 flex items-center gap-1.5 transition-colors"
+                      aria-label={`Revoke ${keyRecord.name}`}
+                      title="Revoke this key"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span>Revoke</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          ) : (
+            <div className="p-6 rounded-2xl border border-dashed border-slate-300 bg-slate-50 text-center" role="status">
+              <Key className="w-6 h-6 mx-auto mb-2 text-slate-500" />
+              <p className="text-sm font-semibold text-slate-800">No active API keys</p>
+              <p className="text-xs text-slate-600 mt-1">Create a key above. Revoked keys are removed from this list immediately.</p>
+            </div>
+          )}
+        </section>
 
         {/* Quick cURL snippet */}
         <div className="space-y-2">
-          <p className="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
+          <p className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
             <Code2 className="w-4 h-4 text-brand-cyan" />
-            <span>cURL Quickstart</span>
+            <span>cURL quickstart</span>
           </p>
-          <div className="bg-dark-950 p-3.5 rounded-2xl font-mono text-xs text-slate-300 border border-white/5 overflow-x-auto">
+          <div className="api-code-sample bg-dark-950 p-4 rounded-2xl font-mono text-sm text-slate-300 border border-white/5 overflow-x-auto">
             <pre>{`curl -X POST https://api.bhideo.ai/v1/video/generate \\
-  -H "Authorization: Bearer ${user.apiKeys?.[0]?.key || 'bh_live_...'}" \\
+  -H "Authorization: Bearer ${snippetKey}" \\
   -H "Content-Type: application/json" \\
   -d '{
     "prompt": "Cyberpunk tiger in rain 8k",
@@ -139,7 +199,6 @@ export const ApiKeysModal = () => {
   }'`}</pre>
           </div>
         </div>
-
       </div>
     </div>
   );

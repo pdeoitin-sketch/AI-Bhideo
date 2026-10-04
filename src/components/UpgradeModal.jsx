@@ -35,11 +35,14 @@ export const UpgradeModal = () => {
 
   return (
     <div
-      className="fixed inset-0 bg-dark-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-fade-in"
+      className="fixed inset-0 bright-modal-overlay z-50 flex items-center justify-center p-4 animate-fade-in"
       onClick={() => setIsUpgradeModalOpen(false)}
     >
       <div
         className="glass-panel rounded-3xl border border-white/10 w-full max-w-3xl max-h-[92vh] overflow-y-auto shadow-2xl animate-bounce-in"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="upgrade-modal-title"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -49,13 +52,14 @@ export const UpgradeModal = () => {
               <Zap className="w-5 h-5 fill-amber-300/80" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-white font-display">Recharge & Subscriptions</h3>
+              <h3 id="upgrade-modal-title" className="text-lg font-bold text-white font-display">Recharge & Subscriptions</h3>
               <p className="text-xs text-slate-400 mt-0.5">
                 Top up GPU compute credits or upgrade your studio plan.
               </p>
             </div>
           </div>
           <button
+            type="button"
             onClick={() => setIsUpgradeModalOpen(false)}
             className="p-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
             aria-label="Close recharge modal"
