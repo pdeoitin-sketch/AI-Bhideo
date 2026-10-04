@@ -1,18 +1,43 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { gatewayBase } from '../services/video/gatewayClient.js';
 import { X, Key, Copy, Check, Plus, Trash2, Code2, ExternalLink } from 'lucide-react';
 
 export const ApiKeysModal = () => {
-  const { isApiKeysModalOpen, setIsApiKeysModalOpen, user, setUser, showToast, copyToClipboard } = useApp();
+  const { isApiKeysModalOpen, setIsApiKeysModalOpen, user, setUser, showToast, copyToClipboard, selectedRoute } = useApp();
   const [copiedKeyId, setCopiedKeyId] = useState(null);
   const [newKeyName, setNewKeyName] = useState('');
 
   if (!isApiKeysModalOpen) return null;
 
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+  const base = `${origin}${gatewayBase()}`;
+  const routeId = !selectedRoute || selectedRoute.protocol === 'local' ? 'veo-3-1-lite::replicate#3' : selectedRoute.id;
+  const payload = (extra) =>
+    `{ "routeId": "${routeId}", "params": { "prompt": "Cyberpunk tiger in rain, 8k", "durationSeconds": 6, "resolution": "720p" }${extra} }`;
+  const apiExamples = [
+    '# 1 · which routes exist, and what do they cost per second?',
+    `curl '${base}/models?maxUsdPerSecond=0.05'`,
+    '',
+    '# 2 · price the clip first — no provider call, no spend',
+    `curl -X POST '${base}/estimate' \\`,
+    '  -H "Content-Type: application/json" \\',
+    `  -d '${payload('')}'`,
+    '',
+    '# 3 · submit, then poll the handle until the clip is ready',
+    `curl -X POST '${base}/generate' \\`,
+    '  -H "Content-Type: application/json" \\',
+    `  -d '${payload(', "byok": { "key": "<your-vendor-key>" }')}'`,
+    `curl '${base}/jobs/HANDLE_FROM_STEP_3'`,
+    '',
+    `# Base path comes from the app settings; the local renderer has no HTTP call at all`,
+    `# (it records the studio canvas). Keys are never read back from the gateway.`,
+  ].join('\n');
+
   const handleCopy = (k) => {
     copyToClipboard(k.key);
     setCopiedKeyId(k.id);
-    showToast('Copied API Key', 'Ready to use in requests.', 'success');
+    showToast('Copied demo key', 'Prototype only — no API checks this value.', 'info');
     setTimeout(() => setCopiedKeyId(null), 2000);
   };
 
@@ -60,8 +85,11 @@ export const ApiKeysModal = () => {
               <Key className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-white">Developer API Keys & SDK</h3>
-              <p className="text-xs text-slate-400">Generate high-throughput programmatic video synthesis keys</p>
+              <h3 className="text-lg font-bold text-white">Programmatic access</h3>
+              <p className="text-xs text-slate-400">
+                The video API is the gateway this app talks to — not a hosted Bhideo service. The keys below are
+                prototype data; the requests below are real.
+              </p>
             </div>
           </div>
           <button
@@ -122,21 +150,19 @@ export const ApiKeysModal = () => {
           ))}
         </div>
 
-        {/* Quick cURL snippet */}
+        {/* The real contract, for the route currently selected in the studio. */}
         <div className="space-y-2">
+          <p className="text-[10px] text-slate-500 leading-relaxed">
+            The gateway authorises with its own environment key for that provider, or with a per-request{' '}
+            <code className="text-slate-400">byok.key</code> holding your vendor key. A{' '}
+            <code className="text-slate-400">bh_live_…</code> value from the list above is never sent anywhere.
+          </p>
           <p className="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
             <Code2 className="w-4 h-4 text-brand-cyan" />
             <span>cURL Quickstart</span>
           </p>
           <div className="bg-dark-950 p-3.5 rounded-2xl font-mono text-xs text-slate-300 border border-white/5 overflow-x-auto">
-            <pre>{`curl -X POST https://api.bhideo.ai/v1/video/generate \\
-  -H "Authorization: Bearer ${user.apiKeys?.[0]?.key || 'bh_live_...'}" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "prompt": "Cyberpunk tiger in rain 8k",
-    "model": "bhideo-cinema-v3",
-    "fps": 60
-  }'`}</pre>
+            <pre className="whitespace-pre">{apiExamples}</pre>
           </div>
         </div>
 

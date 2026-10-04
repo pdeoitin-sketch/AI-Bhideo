@@ -5,6 +5,7 @@ import { HeroSection } from './components/HeroSection';
 import { PromptStudio } from './components/PromptStudio';
 import { VideoShowcase } from './components/VideoShowcase';
 import { ModelArchitectureSection } from './components/ModelArchitectureSection';
+import { VideoModelCatalog } from './components/VideoModelCatalog';
 import { FeaturesGrid } from './components/FeaturesGrid';
 import { PricingSection } from './components/PricingSection';
 import { UserProfile } from './components/UserProfile';
@@ -72,7 +73,23 @@ function MainLayout() {
           )}
 
           {currentView === 'models' && (
-            <div className="pt-6">
+            <div className="pt-6 space-y-4">
+              <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="mb-5">
+                  <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-500/10 border border-brand-500/30 text-brand-200 text-[11px] font-mono font-bold">
+                    LIVE CATALOGUE
+                  </span>
+                  <h2 className="mt-3 text-2xl sm:text-3xl font-display font-extrabold text-white tracking-tight">
+                    Video models this studio can actually call
+                  </h2>
+                  <p className="mt-2 text-sm text-slate-400 max-w-2xl leading-relaxed">
+                    Every route below is wired end to end: the same adapter runs in your browser (BYOK) and behind
+                    the gateway. Prices are public list rates, cheapest first — the free local renderer always works
+                    with no key and no network. Add a provider key in the studio to unlock a paid route.
+                  </p>
+                </div>
+                <VideoModelCatalog />
+              </section>
               <ModelArchitectureSection />
               <FeaturesGrid />
             </div>

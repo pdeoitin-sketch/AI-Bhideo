@@ -37,6 +37,9 @@ import {
   inferPromptTheme,
   recordCanvasVideo,
 } from '../utils/videoRecorder';
+import { VideoModelCatalog } from './VideoModelCatalog';
+import { GenerationCostBar } from './GenerationCostBar';
+import { ProviderAccessPanel } from './ProviderAccessPanel';
 
 export const PromptStudio = () => {
   const {
@@ -69,6 +72,11 @@ export const PromptStudio = () => {
     activeGeneratedVideo,
     videoAssets,
     startVideoGeneration,
+    startGeneration,
+    selectedRoute,
+    isRemoteRoute,
+    remoteEstimate,
+    gatewayInfo,
     enhancePrompt,
     setRandomInspiration,
     copyPrompt,
@@ -80,6 +88,7 @@ export const PromptStudio = () => {
   } = useApp();
 
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [isProviderPanelOpen, setIsProviderPanelOpen] = useState(false);
   const [showNegative, setShowNegative] = useState(false);
   const [isPlaying, setIsPlaying] = useState(true);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
@@ -234,7 +243,7 @@ export const PromptStudio = () => {
     setTimeout(() => setIsCopied(false), 2000);
   };
 
-  const handleGenerateVideo = () => startVideoGeneration(({ durationSeconds, fps, onProgress }) => {
+  const handleGenerateVideo = () => startGeneration(({ durationSeconds, fps, onProgress }) => {
     if (!canvasRef.current) {
       throw new Error('The preview canvas is not ready. Please wait a moment and retry.');
     }
@@ -297,7 +306,7 @@ export const PromptStudio = () => {
               Video Render Studio
             </h2>
             <p className="text-sm text-slate-400 mt-1 max-w-xl">
-              Describe your scene, pick a render profile, and export a real playable clip. This static demo renders locally in your browser; it is not connected to a hosted AI model.
+              Describe your scene, pick a model and API, then export a real playable clip. Free routes render on your own canvas; any route with a key runs the real model through the gateway (fal, Replicate, Cloudflare, Veo, Kling, MiniMax, Runway, self-hosted…).
             </p>
           </div>
 
@@ -422,57 +431,11 @@ export const PromptStudio = () => {
               </div>
             </div>
 
-            {/* Model Selection Selector */}
-            <div className="glass-panel p-5 rounded-3xl border border-white/10">
-              <div className="flex items-center justify-between mb-4">
-                <label className="text-xs font-semibold text-slate-300 flex items-center gap-2">
-                  <Cpu className="w-4 h-4 text-purple-400" />
-                  <span>Select Render Profile</span>
-                </label>
-                <span className="text-[11px] text-slate-400">4 Style Profiles</span>
-              </div>
+            {/* Video model + API catalogue */}
+            <VideoModelCatalog />
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {models.map((m) => {
-                  const isSelected = selectedModel.id === m.id;
-                  return (
-                    <div
-                      key={m.id}
-                      onClick={() => setSelectedModel(m)}
-                      className={`p-3.5 rounded-2xl cursor-pointer transition-all border text-left relative overflow-hidden ${
-                        isSelected
-                          ? 'bg-dark-850 border-brand-500 shadow-lg shadow-brand-500/20 ring-1 ring-brand-500/50'
-                          : 'bg-dark-900/70 border-white/10 hover:border-white/20 hover:bg-dark-850/60'
-                      }`}
-                    >
-                      {/* Active Indicator bar */}
-                      {isSelected && (
-                        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-brand-500 via-brand-cyan to-brand-pink" />
-                      )}
-
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-semibold text-sm text-white">{m.name}</span>
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-brand-500/20 text-brand-300">
-                              {m.badge}
-                            </span>
-                          </div>
-                          <p className="text-[11px] text-slate-400 mt-1 line-clamp-2 leading-relaxed">
-                            {m.description}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="mt-3 pt-2.5 border-t border-white/5 flex items-center justify-between text-[10px] font-mono text-slate-400">
-                        <span>{m.resolution}</span>
-                        <span className="text-amber-400 font-semibold">⚡ {m.creditCost} credits</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+            <GenerationCostBar onOpenProviderAccess={() => setIsProviderPanelOpen(true)} />
+            <ProviderAccessPanel open={isProviderPanelOpen} onClose={() => setIsProviderPanelOpen(false)} />
 
             {/* Camera Controls & Aspect Ratio Settings */}
             <div className="glass-panel p-5 rounded-3xl border border-white/10 space-y-5">
@@ -650,14 +613,18 @@ export const PromptStudio = () => {
                 {isGenerating ? (
                   <>
                     <RefreshCw className="w-5 h-5 text-brand-400 animate-spin" />
-                    <span>Recording Video... {generationProgress}%</span>
+                    <span>{isRemoteRoute ? 'Generating on provider' : 'Recording video'}… {generationProgress}%</span>
                   </>
                 ) : (
                   <>
                     <Sparkles className="w-5 h-5 text-white group-hover:rotate-12 transition-transform" />
-                    <span>Render Video Clip ({selectedModel.name})</span>
+                    <span>{isRemoteRoute ? 'Generate' : 'Render'} with {selectedRoute?.model?.name || selectedModel.name}</span>
                     <span className="px-2 py-0.5 rounded-lg bg-black/30 border border-white/20 text-xs text-amber-300 font-mono">
-                      ⚡ {selectedModel.creditCost} Credits
+                      {remoteEstimate && remoteEstimate.usd > 0
+                        ? `$${remoteEstimate.usd.toFixed(2)} · ⚡${remoteEstimate.credits}`
+                        : remoteEstimate && remoteEstimate.credits > 0
+                          ? `free API · ⚡${remoteEstimate.credits} demo`
+                          : 'FREE'}
                     </span>
                   </>
                 )}
