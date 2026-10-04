@@ -460,27 +460,27 @@ export function WorkspaceLayout() {
           <ErrorBoundary key={currentView} title="This section could not be loaded">
             {isChatView && <ChatWorkspace key={newChatVersion} threads={threads} setThreads={setThreads} activeChatId={activeChatId} setActiveChatId={setActiveChatId} />}
             {currentView === 'studio' && (
-              <div className="legacy-view">
+              <div className="legacy-view light-legacy-view">
                 <PromptStudio />
                 <VideoShowcase />
                 <Footer />
               </div>
             )}
             {currentView === 'showcase' && (
-              <div className="legacy-view">
+              <div className="legacy-view light-legacy-view">
                 <VideoShowcase />
                 <Footer />
               </div>
             )}
             {currentView === 'models' && (
-              <div className="legacy-view">
+              <div className="legacy-view light-legacy-view">
                 <ModelArchitectureSection />
                 <FeaturesGrid />
                 <Footer />
               </div>
             )}
-            {currentView === 'profile' && <div className="legacy-view"><UserProfile /><Footer /></div>}
-            {currentView === 'pricing' && <div className="legacy-view"><PricingSection /><Footer /></div>}
+            {currentView === 'profile' && <div className="legacy-view light-legacy-view"><UserProfile /><Footer /></div>}
+            {currentView === 'pricing' && <div className="legacy-view light-legacy-view"><PricingSection /><Footer /></div>}
           </ErrorBoundary>
         </main>
       </div>

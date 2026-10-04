@@ -50,7 +50,7 @@ export const ApiKeysModal = () => {
   };
 
   return (
-    <div className="fixed inset-0 bg-dark-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bright-modal-overlay z-50 flex items-center justify-center p-4">
       <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-white/10 max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-fade-in space-y-6 shadow-2xl">
         
         {/* Header */}
