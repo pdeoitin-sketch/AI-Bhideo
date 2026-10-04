@@ -2460,3 +2460,49 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Accessible light presentation across every workspace mode. The legacy
+   studio views now share the product's white, crimson and blue palette. */
+.light-legacy-view {
+  color: var(--workspace-ink);
+  background: var(--workspace-bg);
+  font-size: 16px;
+}
+.light-legacy-view .text-white { color: var(--workspace-ink) !important; }
+.light-legacy-view .text-slate-100,
+.light-legacy-view .text-slate-200,
+.light-legacy-view .text-slate-300 { color: #344252 !important; }
+.light-legacy-view .text-slate-400,
+.light-legacy-view .text-slate-500 { color: #59636f !important; }
+.light-legacy-view [class*="bg-dark-950"],
+.light-legacy-view [class*="bg-dark-900"],
+.light-legacy-view [class*="bg-dark-800"] {
+  background: var(--workspace-paper) !important;
+}
+.light-legacy-view [class*="border-white"] { border-color: var(--workspace-line) !important; }
+.light-legacy-view .glass-panel,
+.light-legacy-view .glass-card { background: var(--workspace-paper); border-color: var(--workspace-line); }
+.workspace-content-legacy { background: var(--workspace-bg); }
+
+/* The previous UI used 7–12px labels in several modes. Keep compact badges
+   small, but make readable controls and supporting copy comfortably sized. */
+.workspace-shell { font-size: 15px; }
+.workspace-shell button, .workspace-shell input, .workspace-shell textarea,
+.workspace-shell select { font-size: 15px; }
+.bright-modal-overlay { background: rgba(32, 40, 51, .42); backdrop-filter: blur(10px); }
+.bright-modal-overlay > .glass-panel {
+  background: var(--workspace-paper) !important;
+  color: var(--workspace-ink) !important;
+  border-color: var(--workspace-line) !important;
+}
+.bright-modal-overlay .text-white { color: var(--workspace-ink) !important; }
+.bright-modal-overlay .text-slate-200,
+.bright-modal-overlay .text-slate-300 { color: #344252 !important; }
+.bright-modal-overlay .text-slate-400,
+.bright-modal-overlay .text-slate-500 { color: #59636f !important; }
+.bright-modal-overlay [class*="bg-dark-950"],
+.bright-modal-overlay [class*="bg-dark-900"] { background: #f4f6f8 !important; }
+.bright-modal-overlay [class*="border-white"] { border-color: var(--workspace-line) !important; }
+.bright-modal-overlay input { font-size: 15px !important; color: var(--workspace-ink) !important; }
+.bright-modal-overlay input::placeholder { color: #718096 !important; }
+.bright-modal-overlay .text-brand-400 { color: var(--workspace-crimson) !important; }
