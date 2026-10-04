@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { gatewayBase } from '../services/video/gatewayClient.js';
 import { X, Key, Copy, Check, Plus, Trash2, Code2 } from 'lucide-react';
 
 export const ApiKeysModal = () => {
@@ -11,11 +12,11 @@ export const ApiKeysModal = () => {
     revokeApiKey,
     showToast,
     copyToClipboard,
+    selectedRoute,
   } = useApp();
   const [copiedKeyId, setCopiedKeyId] = useState(null);
   const [newKeyName, setNewKeyName] = useState('');
   const apiKeys = Array.isArray(user?.apiKeys) ? user.apiKeys : [];
-  const snippetKey = apiKeys[0]?.key || 'bh_live_...';
 
   useEffect(() => {
     if (!isApiKeysModalOpen) return undefined;
@@ -26,7 +27,39 @@ export const ApiKeysModal = () => {
       }
     };
     window.addEventListener('keydown', handleEscape);
-    return () => window.removeEventListener('keydown', handleEscape);
+    const apiExamples = useMemo(() => {
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+    const base = origin + gatewayBase();
+    const routeId = !selectedRoute || selectedRoute.protocol === 'local' ? 'veo-3-1-lite::replicate#3' : selectedRoute.id;
+    const payload = (extra) =>
+      `{ "routeId": "${routeId}", "params": { "prompt": "Cyberpunk tiger in rain, 8k", "durationSeconds": 6, "resolution": "720p" }${extra} }`;
+    return [
+      '# 1 · which routes exist, and what do they cost per second?',
+      `curl '${base}/models?maxUsdPerSecond=0.05'`,
+      '',
+      '# 2 · price the clip first — no provider call, no spend',
+      `curl -X POST '${base}/estimate' \\`,
+      '  -H "Content-Type: application/json" \\',
+      `  -d '${payload('')}'`,
+      '',
+      '# 3 · submit, then poll the handle until the clip is ready',
+      `curl -X POST '${base}/generate' \\`,
+      '  -H "Content-Type: application/json" \\',
+      `  -d '${payload(', "byok": { "key": "<your-vendor-key>" }')}'`,
+      `curl '${base}/jobs/HANDLE_FROM_STEP_3'`,
+    ].join('\n');
+  }, [selectedRoute]);
+
+  const copySnippet = () => {
+    const copied = copyToClipboard(apiExamples);
+    if (!copied) {
+      showToast('Copy Failed', 'Your browser blocked clipboard access.', 'warning');
+      return;
+    }
+    showToast('Copied', 'The gateway requests are on your clipboard.', 'success');
+  };
+
+  return () => window.removeEventListener('keydown', handleEscape);
   }, [isApiKeysModalOpen, setIsApiKeysModalOpen]);
 
   if (!isApiKeysModalOpen) return null;
@@ -38,7 +71,7 @@ export const ApiKeysModal = () => {
       return;
     }
     setCopiedKeyId(keyRecord.id);
-    showToast('Copied API Key', 'Ready to use in requests.', 'success');
+    showToast('Copied demo key', 'Prototype only — no API checks this value.', 'info');
     setTimeout(() => setCopiedKeyId(null), 2000);
   };
 
@@ -84,12 +117,15 @@ export const ApiKeysModal = () => {
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-white/10">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-brand-500/10 text-brand-500 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-2xl bg-brand-500/10 text-brand-400 flex items-center justify-center">
               <Key className="w-5 h-5" />
             </div>
             <div>
               <h3 id="api-keys-modal-title" className="text-lg font-bold text-white">Developer API Keys & SDK</h3>
-              <p className="text-xs text-slate-400">Create and manage keys for the local preview.</p>
+              <p className="text-xs text-slate-400">
+                These keys are prototype data for the local preview. The video API is the gateway this app talks
+                to — see the real requests below.
+              </p>
             </div>
           </div>
           <button
@@ -182,23 +218,33 @@ export const ApiKeysModal = () => {
           )}
         </section>
 
-        {/* Quick cURL snippet */}
-        <div className="space-y-2">
-          <p className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
-            <Code2 className="w-4 h-4 text-brand-cyan" />
-            <span>cURL quickstart</span>
-          </p>
-          <div className="api-code-sample bg-dark-950 p-4 rounded-2xl font-mono text-sm text-slate-300 border border-white/5 overflow-x-auto">
-            <pre>{`curl -X POST https://api.bhideo.ai/v1/video/generate \\
-  -H "Authorization: Bearer ${snippetKey}" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "prompt": "Cyberpunk tiger in rain 8k",
-    "model": "bhideo-cinema-v3",
-    "fps": 60
-  }'`}</pre>
+        {/* The real contract, for the route currently selected in the studio. */}
+        <section className="space-y-2">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <p className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
+              <Code2 className="w-4 h-4 text-brand-cyan" />
+              <span>Calling the video gateway</span>
+            </p>
+            <button
+              type="button"
+              onClick={copySnippet}
+              className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 flex items-center gap-1.5 transition-colors"
+            >
+              <Copy className="w-3.5 h-3.5" />
+              <span>Copy</span>
+            </button>
           </div>
-        </div>
+          <div className="api-code-sample bg-dark-950 p-4 rounded-2xl font-mono text-sm text-slate-300 border border-white/5 overflow-x-auto">
+            <pre className="whitespace-pre">{apiExamples}</pre>
+          </div>
+          <p className="text-xs text-slate-600 leading-relaxed">
+            The gateway authorises with its own environment key for that provider, or with a per-request{' '}
+            <code className="text-slate-800">byok.key</code> holding your vendor key. A{' '}
+            <code className="text-slate-800">bh_live_…</code> value from the list above is never sent anywhere, and
+            no endpoint here reads a key back.
+          </p>
+        </section>
+
       </div>
     </div>
   );

@@ -1,0 +1,33 @@
+# Cloudflare Worker deployment for the AI-Bhideo video gateway.
+#
+#   npx wrangler dev        # local run on http://localhost:8787/api/video
+#   npx wrangler deploy     # publish
+#
+# The worker mounts the gateway at /api/video, which is also the default the
+# studio uses, so nothing else has to be configured. See `.env.example` for the
+# full list of supported providers.
+
+name = "ai-bhideo-video-gateway"
+main = "worker/index.js"
+compatibility_date = "2026-09-01"
+
+# Budget guardrails are plain vars (they are not secrets) and are enforced
+# inside the gateway, so a crafted request cannot bypass the UI limits.
+[vars]
+BHIDEO_MAX_CLIP_USD = "0.50"
+BHIDEO_MONTHLY_BUDGET_USD = "20"
+
+# Credentials must never live in this file — set each one as a secret:
+#
+#   npx wrangler secret put FAL_KEY
+#   npx wrangler secret put REPLICATE_API_TOKEN
+#   npx wrangler secret put OPENROUTER_API_KEY
+#   npx wrangler secret put GEMINI_API_KEY
+#   npx wrangler secret put MINIMAX_API_KEY
+#   npx wrangler secret put RUNWAYML_API_SECRET
+#   npx wrangler secret put STABILITY_API_KEY
+#   npx wrangler secret put CLOUDFLARE_API_TOKEN
+#   npx wrangler secret put CLOUDFLARE_ACCOUNT_ID
+#
+# …and only for the providers you actually intend to call. `GET /api/video/health`
+# reports which ones are configured; the gateway never returns a key value.

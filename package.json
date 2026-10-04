@@ -7,7 +7,11 @@
     "dev": "vite --host 0.0.0.0 --port 3000",
     "build": "vite build",
     "test": "node --test",
-    "preview": "vite preview --host 0.0.0.0 --port 3000"
+    "preview": "vite preview --host 0.0.0.0 --port 3000",
+    "gateway": "node server/video-gateway.mjs",
+    "gateway:watch": "node --watch server/video-gateway.mjs",
+    "worker:dev": "wrangler dev worker/index.js --port 8787",
+    "worker:deploy": "wrangler deploy"
   },
   "dependencies": {
     "clsx": "^2.1.1",

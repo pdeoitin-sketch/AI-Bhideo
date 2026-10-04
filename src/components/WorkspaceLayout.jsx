@@ -28,6 +28,7 @@ import { ChatWorkspace } from './ChatWorkspace';
 import { Footer } from './Footer';
 import { FeaturesGrid } from './FeaturesGrid';
 import { ModelArchitectureSection } from './ModelArchitectureSection';
+import { VideoModelCatalog } from './VideoModelCatalog';
 import { PricingSection } from './PricingSection';
 import { PromptStudio } from './PromptStudio';
 import { UserProfile } from './UserProfile';
@@ -474,6 +475,22 @@ export function WorkspaceLayout() {
             )}
             {currentView === 'models' && (
               <div className="legacy-view light-legacy-view">
+                <section className="mx-auto w-full max-w-6xl px-4 pt-8 sm:px-6 lg:px-8">
+                  <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-500/10 border border-brand-500/30 text-brand-400 text-xs font-mono font-bold">
+                    LIVE CATALOGUE
+                  </span>
+                  <h2 className="mt-3 text-2xl sm:text-3xl font-display font-extrabold text-white tracking-tight">
+                    Video models this studio can actually call
+                  </h2>
+                  <p className="mt-2 text-sm text-slate-500 max-w-2xl leading-relaxed">
+                    Every route below is wired end to end: the same adapter runs in your browser (BYOK) and behind
+                    the gateway. Prices are public list rates, cheapest first — and the free local renderer always
+                    works with no key and no network.
+                  </p>
+                  <div className="mt-5">
+                    <VideoModelCatalog />
+                  </div>
+                </section>
                 <ModelArchitectureSection />
                 <FeaturesGrid />
                 <Footer />
