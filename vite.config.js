@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as esbuild from 'esbuild';
+import { viteVideoGateway } from './src/services/video/gateway/nodeBridge.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -81,7 +82,14 @@ function dualModeBundlePlugin() {
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [dualModeBundlePlugin(), react()],
+  plugins: [
+    dualModeBundlePlugin(),
+    // Mounts the stateless video gateway at /api/video during `npm run dev`
+    // and `npm run preview`, so the studio can call real providers without a
+    // second process and without putting keys in the browser bundle.
+    viteVideoGateway({ basePath: '/api/video' }),
+    react(),
+  ],
   // Relative asset URLs so the production build also works when it is served
   // from a sub-path (GitHub Pages, static hosts, previews).
   base: './',

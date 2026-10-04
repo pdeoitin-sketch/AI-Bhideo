@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local secrets for the video gateway (never commit provider keys)
+.env
+.env.*
+!.env.example
+.gateway-spend.json
