@@ -117,7 +117,7 @@ export const VideoModelCatalog = () => {
               });
               if (route) setQuery('');
             }}
-            className="px-3 py-1.5 rounded-xl bg-brand-500/15 border border-brand-500/40 text-brand-200 text-[11px] font-semibold hover:bg-brand-500/25 transition-colors flex items-center gap-1.5"
+            className="px-3 py-1.5 rounded-xl bg-brand-500/15 border border-brand-500/40 text-brand-300 text-[11px] font-semibold hover:bg-brand-500/25 transition-colors flex items-center gap-1.5"
             title="Select the cheapest route that matches the filters above"
           >
             <CircleDollarSign className="w-3.5 h-3.5" />
@@ -162,7 +162,7 @@ export const VideoModelCatalog = () => {
                 type="button"
                 onClick={() => setSort(value)}
                 className={`px-2 py-0.5 rounded-lg border transition-colors ${
-                  sort === value ? 'bg-brand-500/20 border-brand-500/60 text-brand-200' : 'border-white/10 text-slate-400 hover:text-slate-200'
+                  sort === value ? 'bg-brand-500/20 border-brand-500/60 text-brand-300' : 'border-white/10 text-slate-400 hover:text-slate-200'
                 }`}
               >
                 {value}
@@ -292,7 +292,7 @@ function FilterChip({ active, onClick, label, icon }) {
       type="button"
       onClick={onClick}
       className={`px-2 py-1 rounded-lg border font-semibold transition-colors flex items-center gap-1 ${
-        active ? 'bg-brand-500/20 border-brand-500/60 text-brand-200' : 'border-white/10 text-slate-400 hover:text-slate-200 hover:bg-white/5'
+        active ? 'bg-brand-500/20 border-brand-500/60 text-brand-300' : 'border-white/10 text-slate-400 hover:text-slate-200 hover:bg-white/5'
       }`}
     >
       {icon}

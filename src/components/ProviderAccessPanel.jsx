@@ -99,7 +99,7 @@ export const ProviderAccessPanel = ({ open, onClose }) => {
                     probe.online ? 'success' : 'error'
                   );
                 }}
-                className="px-3 py-2 rounded-xl bg-brand-500/20 border border-brand-500/40 text-brand-200 text-xs font-semibold hover:bg-brand-500/30 transition-colors disabled:opacity-60"
+                className="px-3 py-2 rounded-xl bg-brand-500/20 border border-brand-500/40 text-brand-300 text-xs font-semibold hover:bg-brand-500/30 transition-colors disabled:opacity-60"
               >
                 {testing ? 'Testing…' : 'Test connection'}
               </button>
@@ -119,7 +119,7 @@ export const ProviderAccessPanel = ({ open, onClose }) => {
                   type="button"
                   onClick={() => updateProviderSettings({ keyMode: mode })}
                   className={`px-2.5 py-1 rounded-lg border text-[11px] font-semibold transition-colors ${
-                    providerSettings.keyMode === mode ? 'bg-brand-500/20 border-brand-500/60 text-brand-200' : 'border-white/10 text-slate-400 hover:text-slate-200'
+                    providerSettings.keyMode === mode ? 'bg-brand-500/20 border-brand-500/60 text-brand-300' : 'border-white/10 text-slate-400 hover:text-slate-200'
                   }`}
                   title={
                     mode === 'auto'
@@ -207,7 +207,7 @@ export const ProviderAccessPanel = ({ open, onClose }) => {
                         <span className="text-[13px] font-semibold text-white">{provider.name}</span>
                         {provider.retired && <span className="text-[10px] px-1.5 rounded bg-rose-500/15 border border-rose-500/40 text-rose-300">RETIRED {provider.retired}</span>}
                         {entry.hasServerKey && <span className="text-[10px] px-1.5 rounded bg-emerald-500/15 border border-emerald-500/40 text-emerald-300">env key</span>}
-                        {entry.hasLocalKey && <span className="text-[10px] px-1.5 rounded bg-brand-500/15 border border-brand-500/40 text-brand-200">browser key {entry.masked}</span>}
+                        {entry.hasLocalKey && <span className="text-[10px] px-1.5 rounded bg-brand-500/15 border border-brand-500/40 text-brand-300">browser key {entry.masked}</span>}
                       </div>
                       <p className="text-[11px] text-slate-400 mt-1">{provider.blurb}</p>
                       <p className="text-[10px] text-slate-500 mt-1">
@@ -266,7 +266,7 @@ export const ProviderAccessPanel = ({ open, onClose }) => {
                         <button
                           type="button"
                           onClick={() => saveProvider(provider.id)}
-                          className="px-2.5 py-1.5 rounded-xl bg-brand-500/20 border border-brand-500/40 text-brand-200 text-[11px] font-semibold hover:bg-brand-500/30 flex items-center gap-1"
+                          className="px-2.5 py-1.5 rounded-xl bg-brand-500/20 border border-brand-500/40 text-brand-300 text-[11px] font-semibold hover:bg-brand-500/30 flex items-center gap-1"
                         >
                           <Save className="w-3 h-3" /> Save
                         </button>

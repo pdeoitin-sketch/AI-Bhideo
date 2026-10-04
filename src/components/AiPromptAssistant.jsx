@@ -77,8 +77,18 @@ export const AiPromptAssistant = () => {
   };
 
   return (
-    <div className="fixed inset-0 bg-dark-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
-      <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-white/10 max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-fade-in space-y-6">
+    <div
+      className="fixed inset-0 bright-modal-overlay z-50 flex items-center justify-center p-4"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) setIsPromptAssistantOpen(false);
+      }}
+    >
+      <div
+        className="glass-panel p-6 sm:p-8 rounded-3xl border border-white/10 max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-fade-in space-y-6"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="prompt-assistant-title"
+      >
         
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-white/10">
@@ -87,11 +97,12 @@ export const AiPromptAssistant = () => {
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-white">AI Director Co-Pilot</h3>
+              <h3 id="prompt-assistant-title" className="text-lg font-bold text-white">AI Director Co-Pilot</h3>
               <p className="text-xs text-slate-400">Transform raw concepts into award-winning cinematic prompt recipes</p>
             </div>
           </div>
           <button
+            type="button"
             onClick={() => setIsPromptAssistantOpen(false)}
             className="p-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white"
           >
