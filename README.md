@@ -5,7 +5,12 @@
 [![React](https://img.shields.io/badge/React-18.3-ec4899.svg)](https://react.dev)
 [![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.4-38bdf8.svg)](https://tailwindcss.com)
 
-**AI-Bhideo** is a browser-based video creation demo. Its current static build renders animated, prompt-themed scenes locally on a canvas and exports playable WebM/MP4 clips; it does not connect to a hosted neural video inference service. A provider backend is required for genuine AI-generated footage.
+**AI-Bhideo** is a browser-based video studio with two generation paths:
+
+1. **Local (default, free, no key)** — animated, prompt-themed scenes are drawn on a canvas and recorded by the browser into a playable WebM/MP4 clip.
+2. **Real video models (optional)** — a catalogue of 23 hosted models (Veo, Kling, Seedance, Hailuo, Runway, Luma, Pika, Wan, Hunyuan, SVD, …) reached through 16 providers via one gateway, priced per second and sorted cheapest-first.
+
+Path 2 is not a hosted service run by this project: every call goes to the vendor **on your own key** — either a server environment variable or a bring-your-own-key entry held only in your browser. With no key configured the app is still fully usable through path 1. See [docs/VIDEO_PROVIDERS.md](docs/VIDEO_PROVIDERS.md).
 
 ---
 
@@ -21,13 +26,13 @@
 - **Aspect Ratio Selector**: 16:9 Landscape, 9:16 Vertical (Shorts/Reels/TikTok), 1:1 Square, 2.39:1 Anamorphic Cinema, 4:5 Social.
 - **Video Render Progress**: Live progress and ETA while the browser records the animated canvas preview to a real WebM/MP4 file.
 
-### 2. 🧠 AI Video Models
-- **`Bhideo Cinema v3`** *(Cinematic profile)*: A cinematic canvas-render profile with prompt-themed lighting and camera styling (⚡ 4 credits).
-- **`Bhideo Turbo v2.1`** *(Lightning Fast)*: A lightweight render profile for quick storyboard previews (⚡ 1 credit).
-- **`Bhideo Motion Pro`** *(Physics & Action)*: A motion-focused preview profile for action, fluid, and vehicle prompts (⚡ 3 credits).
-- **`Bhideo Anime-X`** *(Stylized & VFX)*: A stylized preview profile for animation and illustration prompts (⚡ 2 credits).
-
-> **Current renderer note:** these model names are UI profiles only in this static demo; they do not call an AI inference API. The local renderer chooses a visual theme and a few prompt-recognized subjects, captions the prompt, then records the canvas animation. The resulting clip is browser-rendered (up to 1280px on its long edge), not native 4K AI footage. Connect a video provider backend to generate genuine model output.
+### 2. 🧠 AI Video Models (real providers, priced)
+- **Model & API catalog** (`VideoModelCatalog`): every model, every vendor route that serves it, one click to switch. Filter by free-only, text/image-to-video, audio, and a max-$-per-second slider; a **Cheapest match** button picks the lowest-cost route for your filters.
+- **Local profiles** — `Bhideo Cinema v3`, `Turbo v2.1`, `Motion Pro`, `Anime-X` are canvas render profiles (⚡ 4 / 1 / 3 / 2 credits) with prompt-themed lighting and camera styling. They cost nothing upstream: the clip is browser-rendered (up to 1280px on its long edge), **not** native 4K AI footage.
+- **Hosted models** — `Veo 3.1` (lite/fast/standard), `Kling 3.0` (std/pro/4K), `Seedance 2.0 / 1.5 Pro`, `Hailuo 2.3 / H3`, `Runway Gen-4.5`, `Luma Ray 3.2`, `Pika 2.5`, `Wan 3.0 / 2.2`, `HunyuanVideo 1.5`, `LTX-2.5`, `Grok Imagine Video`, `Vidu Q3`, `CogVideoX`, `PrunaAI P-Video`, `Stable Video Diffusion`, `Gemini Omni Flash`, plus any self-hosted ComfyUI/OpenAI-shaped endpoint.
+- **Same model, many providers**: a model is priced per route, so `Veo 3.1 Lite` can run via Google, fal, Replicate or OpenRouter and the catalog shows which is cheapest for *your* clip length right now (e.g. $0.03–0.08/s).
+- **Cost bar before you spend**: estimated USD, credits, provider, per-take and multi-run notes, the `priceAsOf` date, plus the monthly spend counter and your per-clip cap. Prices are public list rates gathered from vendor docs and stored in `src/data/videoProviders.js` — edit the data, the UI follows.
+- **Retired is not broken**: `Sora 2` stays listed with its retirement date, refuses to be called, and suggests the closest live route instead.
 
 ### 3. 🌐 Community Showcase & Gallery
 - Filter by themes: Photorealistic Cinema, Sci-Fi & Cyberpunk, Fantasy & Nature, Anime & VFX, Drone & Aerial, Commercial & Ads, and My Generations.
@@ -39,7 +44,7 @@
 - **Profile Header**: Avatar, cover banner, bio editing, tier badges, and live stats (Videos Created, Render Hours Saved, Community Likes, Cloud Storage).
 - **🎬 My Creations**: Generated video library with batch actions, lightbox viewing, prompt remixes, and deletion.
 - **⚡ Subscription & Credits**: Credit usage gauge, instant recharge packs (+500, +2,000), and plan manager.
-- **🔑 Developer API Keys & SDK**: Secret API key management (`bh_live_...`), copy to clipboard, key revocation, and code snippets in Python and cURL.
+- **🔑 Developer API Keys & SDK**: a *demo* key list (`bh_live_…` — nothing validates these, and no AI-Bhideo API accepts them) next to the real request shape for whichever route is selected in the studio: the exact vendor endpoint, headers and JSON body as a copy-paste `curl`, generated by the same adapter the gateway uses. Real credentials are entered once per provider in the studio's provider panel.
 - **⚙️ Studio Preferences**: Default synthesis model, default resolution (1080p / 4K), auto-enhance toggle, and NSFW safety filter level.
 
 ### 5. 🔐 Authentication System
@@ -82,6 +87,8 @@ The studio is defensive by design so that a single failure can never leave a bla
 - **Icons**: Lucide React
 - **Video Engine**: Prompt-themed Canvas renderer, browser `MediaRecorder` export, and IndexedDB storage for generated clip files
 - **State**: React Context API with LocalStorage metadata and IndexedDB video blobs
+- **Video gateway**: one fetch-based handler (`src/services/video/gateway/`) mounted by the Vite dev server, a standalone Node server, a Vercel function and a Cloudflare Worker — per-provider protocol adapters, cost/budget guards, stateless job handles, allowlisted media proxy
+- **Tests**: `node --test` over the catalogue, cost engine, every protocol adapter, the gateway HTTP contract and all four runtime mounts (71 tests, no test framework dependency)
 
 ---
 
@@ -106,6 +113,33 @@ npm run dev
 ```
 
 Visit `http://localhost:3000` in your browser.
+
+### Generating with real video models (optional)
+
+```bash
+cp .env.example .env    # add only the provider keys you intend to pay for
+npm run dev             # gateway is already mounted at /api/video
+# or run it separately:
+npm run gateway         # http://localhost:8787/api/video/health
+```
+
+Then open **Studio → Providers** and either leave it on the gateway, or paste a
+key for one vendor (BYOK) and let the browser call that provider directly where
+CORS allows it. `GET /api/video/models?free=1&maxUsdPerSecond=0.05` is the fastest
+way to see what is cheap right now.
+
+```bash
+# Deploy the gateway
+npx vercel deploy                       # api/video/[...path].js is the whole API
+npx wrangler deploy                     # worker/index.js + wrangler.toml
+npx wrangler secret put FAL_KEY         # one secret per provider you enable
+```
+
+Guardrails are enforced in the gateway, not only the UI: `BHIDEO_MAX_CLIP_USD`
+rejects an expensive clip before any vendor is called, `BHIDEO_MONTHLY_BUDGET_USD`
+caps monthly upstream spend, `/download` proxies only allowlisted vendor CDNs over
+HTTPS, and no endpoint ever echoes a key. Full reference:
+[docs/VIDEO_PROVIDERS.md](docs/VIDEO_PROVIDERS.md).
 
 ### Production Build
 
