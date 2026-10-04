@@ -12,12 +12,12 @@
 ## ✨ Features & Architecture Highlights
 
 ### Chat-first creative workspace
-- **Gemini-inspired interaction pattern**: warm cream canvas, crimson-and-blue identity, collapsible navigation rail, model profile picker, and a centered conversation composer—branded for AI-Bhideo rather than copying Gemini assets.
+- **Gemini-inspired interaction pattern**: bright white canvas, crimson-and-blue identity, collapsible navigation rail, model profile picker, and a centered conversation composer—branded for AI-Bhideo rather than copying Gemini assets.
 - **Persistent conversations**: start new chats, search recent threads, return to previous conversations, and keep messages in browser storage.
 - **Useful starter ideas**: select a cinematic, product, or imaginative-world prompt, or shuffle in a prompt from the existing inspiration library.
 - **Working composer controls**: ask locally, route a prompt into Video Studio, attach local files, use browser speech recognition when available, and set aspect ratio, duration, and frame rate.
 - **Honest local-mode disclosure**: the chat shell is ready for a language-model integration, but this static build does not send messages or attachments to an AI service. The built-in assistant provides local guidance only.
-- **Responsive and accessible**: collapsible desktop navigation, mobile drawer, keyboard send/new-chat shortcuts, visible focus states, reduced-motion support, and high-contrast cream, crimson, and blue colors.
+- **Responsive and accessible**: collapsible desktop navigation, mobile drawer, keyboard send/new-chat shortcuts, visible focus states, reduced-motion support, readable medium-sized type, and high-contrast white, crimson, and blue colors.
 
 ### 1. 🚀 Neural Video Studio
 - **Prompt Synthesis Bar**: Expandable prompt input with real-time character and token counters.
@@ -47,12 +47,12 @@
 - **Profile Header**: Avatar, cover banner, bio editing, tier badges, and live stats (Videos Created, Render Hours Saved, Community Likes, Cloud Storage).
 - **🎬 My Creations**: Generated video library with batch actions, lightbox viewing, prompt remixes, and deletion.
 - **⚡ Subscription & Credits**: Credit usage gauge, instant recharge packs (+500, +2,000), and plan manager.
-- **🔑 Developer API Keys & SDK**: Secret API key management (`bh_live_...`), copy to clipboard, key revocation, and code snippets in Python and cURL.
+- **🔑 Developer API Keys & SDK**: Local demo key management (`bh_live_...`), copy and immediate revocation without a reload, cancelable key creation, and code snippets in Python and cURL. These demo keys do not authenticate with a live API.
 - **⚙️ Studio Preferences**: Default synthesis model, default resolution (1080p / 4K), auto-enhance toggle, and NSFW safety filter level.
 
 ### 5. 🔐 Authentication System
-- Seamless Sign In, Sign Up, and Forgot Password modal with social logins (Google, GitHub, Discord, Apple).
-- Active state management with localStorage persistence.
+- Sign In, Sign Up, and Forgot Password modal with responsive form validation and Google/GitHub preview actions.
+- Authentication is simulated locally in this static demo; no password is sent to or stored by a server.
 
 ### 6. 💳 Recharge & Subscription Modal
 - Demo credit packs: **+500**, **+2,000**, and **+6,000** credits; selections update local state and do not charge a payment method.
@@ -81,12 +81,12 @@ The studio is defensive by design so that a single failure can never leave a bla
 - **Canvas engine fixes**: `ProceduralVideoEngine` no longer auto-starts a `requestAnimationFrame` loop on construction — idle showcase cards render one static poster frame and only animate while hovered (previously every card on screen ran a 60 FPS loop forever). `play()` cannot stack duplicate loops and `destroy()` hard-stops rendering.
 - **Missing Tailwind utilities added**: `animate-fade-in`, `animate-bounce-in`, `scrollbar-none` and the `h-18` navbar height are now actually defined, plus a `prefers-reduced-motion` fallback.
 - **Relative base path** (`base: './'`): the production build also works when served from a sub-path (static hosts, GitHub Pages, previews).
-- **Zero-config GitHub Pages & static root deployment (`bundle/app.js` + `bundle/app.css`)**: `index.html` and `404.html` ship with inline dark-theme fallback styles and reference pre-compiled `./bundle/app.css` and `./bundle/app.js` (plus `.nojekyll`). When GitHub Pages deploys directly from the repository root (`main` / `/`), the full application loads immediately instead of failing on uncompiled `/src/main.jsx` with a blank white screen. During `npm run dev` and `npm run build`, the Vite plugin in `vite.config.js` transparently switches to `/src/main.jsx` and refreshes `bundle/` on every build. `.github/workflows/ci-pages.yml` fails CI when `bundle/` drifts from `src/` and explicitly requests the Pages build on every push to `main`, so neither a stale bundle nor a skipped Pages build can silently ship a blank page (see **Deployment — GitHub Pages** below).
+- **Zero-config GitHub Pages & static root deployment (`bundle/app.js` + `bundle/app.css`)**: `index.html` and `404.html` ship with a bright white-theme first-paint fallback and reference pre-compiled `./bundle/app.css` and `./bundle/app.js` (plus `.nojekyll`). When GitHub Pages deploys directly from the repository root (`main` / `/`), the full application loads immediately instead of failing on uncompiled `/src/main.jsx` with a blank white screen. During `npm run dev` and `npm run build`, the Vite plugin in `vite.config.js` transparently switches to `/src/main.jsx` and refreshes `bundle/` on every build. `.github/workflows/ci-pages.yml` fails CI when `bundle/` drifts from `src/` and explicitly requests the Pages build on every push to `main`, so neither a stale bundle nor a skipped Pages build can silently ship a blank page (see **Deployment — GitHub Pages** below).
 
 ## 🛠️ Tech Stack
 
 - **Framework**: React 18 + Vite 6
-- **Styling**: Tailwind CSS 3.4 with a high-contrast cream, crimson, and blue workspace palette plus a matching cinematic studio theme
+- **Styling**: Tailwind CSS 3.4 with bright white surfaces, readable medium-sized typography, and a consistent crimson-and-blue palette across chat, studio, Explore, Models, library, plans, and credits
 - **Icons**: Lucide React
 - **Video Engine**: Prompt-themed Canvas renderer, browser `MediaRecorder` export, and IndexedDB storage for generated clip files
 - **State**: React Context API with LocalStorage metadata and IndexedDB video blobs

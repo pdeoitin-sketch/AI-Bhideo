@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { X, Lock, Mail, User, Sparkles, ArrowRight, ShieldCheck, Github } from 'lucide-react';
+import { X, Lock, Mail, User, Sparkles, Github } from 'lucide-react';
 
 export const AuthModal = () => {
   const { 
@@ -13,34 +13,58 @@ export const AuthModal = () => {
     showToast 
   } = useApp();
 
-  const [email, setEmail] = useState('alex.rivera@bhideo.ai');
-  const [password, setPassword] = useState('••••••••••••');
-  const [name, setName] = useState('Alex Rivera');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+
+  useEffect(() => {
+    if (!isAuthModalOpen) return undefined;
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') setIsAuthModalOpen(false);
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [isAuthModalOpen, setIsAuthModalOpen]);
 
   if (!isAuthModalOpen) return null;
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!email) {
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    const normalizedEmail = email.trim();
+    const normalizedName = name.trim();
+
+    if (!normalizedEmail) {
       showToast('Email Required', 'Please enter your email address.', 'warning');
+      return;
+    }
+
+    if (authModalMode !== 'forgot' && !password.trim()) {
+      showToast('Password Required', 'Please enter your password to continue.', 'warning');
+      return;
+    }
+
+    if (authModalMode === 'signup' && !normalizedName) {
+      showToast('Name Required', 'Please enter your name to create an account.', 'warning');
       return;
     }
 
     if (authModalMode === 'signup') {
       setUser(prev => ({
         ...prev,
-        name: name || 'AI Video Creator',
-        email: email,
+        name: normalizedName,
+        email: normalizedEmail,
         tier: 'Free Explorer',
         credits: 50
       }));
-      handleLogin(email, password);
-      showToast('Account Created!', `Welcome to AI-Bhideo, ${name || 'Creator'}!`, 'success');
+      handleLogin(normalizedEmail, password);
+      setPassword('');
+      showToast('Account Created!', `Welcome to AI-Bhideo, ${normalizedName}!`, 'success');
     } else if (authModalMode === 'forgot') {
-      showToast('Reset Link Sent', `Check ${email} for password reset instructions.`, 'info');
+      showToast('Reset Link Sent', `Check ${normalizedEmail} for password reset instructions.`, 'info');
       setAuthModalMode('login');
     } else {
-      handleLogin(email, password);
+      handleLogin(normalizedEmail, password);
+      setPassword('');
     }
   };
 
@@ -55,13 +79,25 @@ export const AuthModal = () => {
   };
 
   return (
-    <div className="fixed inset-0 bright-modal-overlay z-50 flex items-center justify-center p-4">
-      <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-white/10 max-w-md w-full animate-fade-in relative shadow-2xl">
+    <div
+      className="fixed inset-0 bright-modal-overlay z-50 flex items-center justify-center p-4"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) setIsAuthModalOpen(false);
+      }}
+    >
+      <div
+        className="glass-panel p-6 sm:p-8 rounded-3xl border border-white/10 max-w-md w-full animate-fade-in relative shadow-2xl"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="auth-modal-title"
+      >
         
         {/* Close Button */}
         <button
+          type="button"
           onClick={() => setIsAuthModalOpen(false)}
-          className="absolute top-5 right-5 p-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
+          className="absolute top-5 right-5 p-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-500 hover:text-slate-800 transition-colors"
+          aria-label="Close sign-in"
         >
           <X className="w-5 h-5" />
         </button>
@@ -71,13 +107,16 @@ export const AuthModal = () => {
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-brand-600 via-brand-cyan to-brand-pink mx-auto flex items-center justify-center text-white mb-3 shadow-lg shadow-brand-500/20">
             <Sparkles className="w-6 h-6" />
           </div>
-          <h3 className="text-xl font-bold text-white font-display">
+          <h3 id="auth-modal-title" className="text-xl font-bold text-white font-display">
             {authModalMode === 'login' ? 'Sign in to AI-Bhideo' : 
              authModalMode === 'signup' ? 'Create your Studio Account' : 
              'Reset your Password'}
           </h3>
-          <p className="text-xs text-slate-400 mt-1">
-            Access 4K neural video generation, private models, and GPU compute
+          <p className="text-xs text-slate-500 mt-2">
+            Sign in to your AI-Bhideo creative workspace.
+          </p>
+          <p className="auth-preview-notice" role="note">
+            Preview mode: sign-in is simulated in this browser. Do not enter a real password.
           </p>
         </div>
 
@@ -85,6 +124,7 @@ export const AuthModal = () => {
         {authModalMode !== 'forgot' && (
           <div className="space-y-2 mb-4">
             <button
+              type="button"
               onClick={() => handleOAuthLogin('Google')}
               className="w-full py-2.5 px-4 rounded-xl bg-dark-900 border border-white/10 hover:border-white/20 text-slate-200 hover:text-white text-xs font-semibold transition-all flex items-center justify-center gap-2"
             >
@@ -98,6 +138,7 @@ export const AuthModal = () => {
             </button>
 
             <button
+              type="button"
               onClick={() => handleOAuthLogin('GitHub')}
               className="w-full py-2.5 px-4 rounded-xl bg-dark-900 border border-white/10 hover:border-white/20 text-slate-200 hover:text-white text-xs font-semibold transition-all flex items-center justify-center gap-2"
             >
@@ -119,11 +160,14 @@ export const AuthModal = () => {
         <form onSubmit={handleSubmit} className="space-y-3.5">
           {authModalMode === 'signup' && (
             <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Full Name</label>
+              <label htmlFor="auth-name" className="text-xs font-semibold text-slate-700 block mb-1">Full Name</label>
               <div className="relative">
                 <User className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
+                  id="auth-name"
                   type="text"
+                  autoComplete="name"
+                  required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. Alex Rivera"
@@ -134,11 +178,14 @@ export const AuthModal = () => {
           )}
 
           <div>
-            <label className="text-xs font-semibold text-slate-300 block mb-1">Email Address</label>
+            <label htmlFor="auth-email" className="text-xs font-semibold text-slate-700 block mb-1">Email Address</label>
             <div className="relative">
               <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
+                id="auth-email"
                 type="email"
+                autoComplete="email"
+                required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@domain.com"
@@ -150,7 +197,7 @@ export const AuthModal = () => {
           {authModalMode !== 'forgot' && (
             <div>
               <div className="flex justify-between items-center mb-1">
-                <label className="text-xs font-semibold text-slate-300">Password</label>
+                <label htmlFor="auth-password" className="text-xs font-semibold text-slate-700">Password</label>
                 {authModalMode === 'login' && (
                   <button
                     type="button"
@@ -164,7 +211,10 @@ export const AuthModal = () => {
               <div className="relative">
                 <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
+                  id="auth-password"
                   type="password"
+                  autoComplete={authModalMode === 'signup' ? 'new-password' : 'current-password'}
+                  required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••••••"
@@ -176,7 +226,7 @@ export const AuthModal = () => {
 
           <button
             type="submit"
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-400 text-white font-semibold text-xs shadow-lg shadow-brand-500/25 transition-all mt-2"
+            className="modal-primary-action w-full py-3 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-400 text-white font-semibold text-sm shadow-lg shadow-brand-500/25 transition-all mt-2"
           >
             {authModalMode === 'login' ? 'Sign In to Studio' : 
              authModalMode === 'signup' ? 'Create Studio Account' : 
@@ -190,6 +240,7 @@ export const AuthModal = () => {
             <p>
               Don't have an account?{' '}
               <button
+                type="button"
                 onClick={() => setAuthModalMode('signup')}
                 className="text-brand-400 hover:text-brand-300 font-semibold"
               >
@@ -200,6 +251,7 @@ export const AuthModal = () => {
             <p>
               Already have an account?{' '}
               <button
+                type="button"
                 onClick={() => setAuthModalMode('login')}
                 className="text-brand-400 hover:text-brand-300 font-semibold"
               >
