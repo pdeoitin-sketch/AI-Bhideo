@@ -7,6 +7,7 @@ import {
   INSPIRATION_PROMPTS 
 } from '../data/mockData';
 import { readJSON, writeJSON } from '../utils/safeStorage';
+import { createApiKeyRecord, withoutApiKey } from '../utils/apiKeys';
 import { inferPromptTheme } from '../utils/videoRecorder';
 import { deleteVideoBlob, getVideoBlob, saveVideoBlob } from '../utils/videoStorage';
 import {
@@ -820,6 +821,28 @@ export const AppProvider = ({ children }) => {
     setActiveLightboxVideo((prev) => (prev && prev.id === videoId ? null : prev));
   };
 
+  // Keep API-key edits in the shared user state so the profile and key modal
+  // stay in sync immediately, without requiring a page refresh.
+  const createApiKey = (name) => {
+    const apiKey = createApiKeyRecord(name);
+    if (!apiKey) return null;
+
+    setUser((previous) => ({
+      ...previous,
+      apiKeys: [apiKey, ...(Array.isArray(previous.apiKeys) ? previous.apiKeys : [])],
+    }));
+    return apiKey;
+  };
+
+  const revokeApiKey = (keyId) => {
+    if (!keyId) return;
+    setUser((previous) => {
+      const currentKeys = Array.isArray(previous.apiKeys) ? previous.apiKeys : [];
+      const nextKeys = withoutApiKey(currentKeys, keyId);
+      return nextKeys === currentKeys ? previous : { ...previous, apiKeys: nextKeys };
+    });
+  };
+
   // One-time credit packs (never expire).
   const purchaseCredits = (amount) => {
     setUser((prev) => ({
@@ -917,6 +940,8 @@ export const AppProvider = ({ children }) => {
         userCreations,
         setUserCreations,
         deleteCreation,
+        createApiKey,
+        revokeApiKey,
         purchaseCredits,
         prompt,
         setPrompt,
