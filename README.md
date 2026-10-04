@@ -1,17 +1,25 @@
-# 🎬 AI-Bhideo — Prompt-Themed Browser Video Studio
+# 🎬 AI-Bhideo — Chat-first creative workspace and browser video studio
 
-[![Version](https://img.shields.io/badge/version-2.5%20DiT-8b5cf6.svg)](https://github.com/pdeoitin-sketch/AI-Bhideo)
-[![License](https://img.shields.io/badge/license-MIT-06b6d4.svg)](https://github.com/pdeoitin-sketch/AI-Bhideo)
-[![React](https://img.shields.io/badge/React-18.3-ec4899.svg)](https://react.dev)
-[![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.4-38bdf8.svg)](https://tailwindcss.com)
+[![Version](https://img.shields.io/badge/version-2.5%20DiT-a32340.svg)](https://github.com/pdeoitin-sketch/AI-Bhideo)
+[![License](https://img.shields.io/badge/license-MIT-294f72.svg)](https://github.com/pdeoitin-sketch/AI-Bhideo)
+[![React](https://img.shields.io/badge/React-18.3-c25571.svg)](https://react.dev)
+[![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.4-527493.svg)](https://tailwindcss.com)
 
-**AI-Bhideo** is a browser-based video creation demo. Its current static build renders animated, prompt-themed scenes locally on a canvas and exports playable WebM/MP4 clips; it does not connect to a hosted neural video inference service. A provider backend is required for genuine AI-generated footage.
+**AI-Bhideo** is a chat-first creative workspace for developing video ideas. The interface pairs a Gemini-inspired conversation layout with a browser-based video studio, prompt presets, a personal library, render profiles, and community exploration. The current static build renders animated, prompt-themed scenes locally on a canvas and exports playable WebM/MP4 clips; it does not connect to a hosted language or video inference service. A provider backend is required for live AI responses and genuine AI-generated footage.
 
 ---
 
 ## ✨ Features & Architecture Highlights
 
-### 1. 🚀 Neural Video Studio (Front & Center)
+### Chat-first creative workspace
+- **Gemini-inspired interaction pattern**: warm cream canvas, crimson-and-blue identity, collapsible navigation rail, model profile picker, and a centered conversation composer—branded for AI-Bhideo rather than copying Gemini assets.
+- **Persistent conversations**: start new chats, search recent threads, return to previous conversations, and keep messages in browser storage.
+- **Useful starter ideas**: select a cinematic, product, or imaginative-world prompt, or shuffle in a prompt from the existing inspiration library.
+- **Working composer controls**: ask locally, route a prompt into Video Studio, attach local files, use browser speech recognition when available, and set aspect ratio, duration, and frame rate.
+- **Honest local-mode disclosure**: the chat shell is ready for a language-model integration, but this static build does not send messages or attachments to an AI service. The built-in assistant provides local guidance only.
+- **Responsive and accessible**: collapsible desktop navigation, mobile drawer, keyboard send/new-chat shortcuts, visible focus states, reduced-motion support, and high-contrast cream, crimson, and blue colors.
+
+### 1. 🚀 Neural Video Studio
 - **Prompt Synthesis Bar**: Expandable prompt input with real-time character and token counters.
 - **✨ Magic Enhance**: Automatically elevates simple prompts with 35mm Panavision lens, volumetric lighting, and DaVinci color grading keywords.
 - **AI Director Co-Pilot**: An interactive assistant that transforms loose concepts into 3 multi-style director scripts with camera angles and lighting profiles.
@@ -78,7 +86,7 @@ The studio is defensive by design so that a single failure can never leave a bla
 ## 🛠️ Tech Stack
 
 - **Framework**: React 18 + Vite 6
-- **Styling**: Tailwind CSS 3.4 with custom glassmorphism, cyberpunk neon gradients, and animated glowing borders
+- **Styling**: Tailwind CSS 3.4 with a high-contrast cream, crimson, and blue workspace palette plus a matching cinematic studio theme
 - **Icons**: Lucide React
 - **Video Engine**: Prompt-themed Canvas renderer, browser `MediaRecorder` export, and IndexedDB storage for generated clip files
 - **State**: React Context API with LocalStorage metadata and IndexedDB video blobs
